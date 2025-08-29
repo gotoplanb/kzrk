@@ -20,7 +20,7 @@ impl GameState {
         cargo_types: HashMap<String, CargoType>,
     ) -> Self {
         let mut game_state = Self {
-            player: Player::new(10000, "ORD", 100, 500, 10.0), // $10k, ORD, 100 fuel, 500kg cargo, 10km per fuel
+            player: Player::new(10000, "ORD", 150, 500, 10.0), // $10k, ORD, 150 max fuel, 500kg cargo, 10km per fuel
             airports: airports.clone(),
             cargo_types,
             markets: HashMap::new(),

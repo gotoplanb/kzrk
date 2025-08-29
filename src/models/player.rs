@@ -23,7 +23,7 @@ impl Player {
         Self {
             money: starting_money,
             current_airport: starting_airport.to_string(),
-            fuel: max_fuel, // Start with full tank
+            fuel: max_fuel * 2 / 3, // Start with 2/3 tank
             max_fuel,
             cargo_inventory: CargoInventory::new(),
             max_cargo_weight,
