@@ -160,28 +160,28 @@ src/
 ## Implementation Phases
 
 ### Phase 1: Core Data Models
-- [ ] Define basic structs for Player, Airport, CargoType, Market
-- [ ] Create game state structure
-- [ ] Implement basic distance calculations
-- [ ] Add static data for airports and cargo types
+- [x] Define basic structs for Player, Airport, CargoType, Market
+- [x] Create game state structure
+- [x] Implement basic distance calculations
+- [x] Add static data for airports and cargo types
 
 ### Phase 2: Market System
-- [ ] Implement price generation algorithm
-- [ ] Create market update system
-- [ ] Add buy/sell functionality
-- [ ] Handle inventory management
+- [x] Implement price generation algorithm
+- [x] Create market update system
+- [x] Add buy/sell functionality
+- [x] Handle inventory management
 
 ### Phase 3: Travel System
-- [ ] Implement fuel consumption calculation
-- [ ] Add travel validation (enough fuel, valid destination)
-- [ ] Update player location
-- [ ] Refresh market prices on arrival
+- [x] Implement fuel consumption calculation
+- [x] Add travel validation (enough fuel, valid destination)
+- [x] Update player location
+- [x] Refresh market prices on arrival
 
 ### Phase 4: Game Loop & UI
-- [ ] Create main game loop
-- [ ] Implement terminal-based UI
-- [ ] Add input handling and menu system
-- [ ] Display current status, market prices, and options
+- [x] Create main game loop
+- [x] Implement terminal-based UI
+- [x] Add input handling and menu system
+- [x] Display current status, market prices, and options
 
 ### Phase 5: Game Balance & Polish
 - [ ] Balance starting conditions and price ranges
