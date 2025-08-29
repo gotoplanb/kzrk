@@ -4,7 +4,7 @@ A classic buy-low-sell-high trading game set in the aviation world, inspired by 
 
 ## Dependencies
 
-1. [Rust](https://www.rust-lang.org/tools/install)
+1. Install Rust with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 
 ## Running
 
