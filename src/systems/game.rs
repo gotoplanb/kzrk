@@ -1,5 +1,7 @@
 use crate::models::{Airport, CargoType, Market, Player};
+use crate::systems::MarketSystem;
 use std::collections::HashMap;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,11 +59,8 @@ impl GameState {
     }
 
     fn initialize_markets(&mut self) {
-        for airport_id in self.airports.keys() {
-            let airport = &self.airports[airport_id];
-            let fuel_price = (airport.base_fuel_price as f32 * airport.market_profile.fuel_modifier) as u32;
-            self.markets.insert(airport_id.clone(), Market::new(airport_id, fuel_price));
-        }
+        let mut rng = rand::thread_rng();
+        self.markets = MarketSystem::initialize_all_markets(&self.airports, &self.cargo_types, &mut rng);
     }
 
     pub fn get_distance(&self, from: &str, to: &str) -> Option<f64> {
@@ -105,6 +104,25 @@ impl GameState {
             self.player.can_afford(market.fuel_price)
         } else {
             false
+        }
+    }
+
+    pub fn refresh_current_market(&mut self) {
+        let current_airport_id = self.player.current_airport.clone();
+        if let Some(airport) = self.airports.get(&current_airport_id) {
+            if let Some(market) = self.markets.get_mut(&current_airport_id) {
+                let mut rng = rand::thread_rng();
+                MarketSystem::update_market_prices(market, airport, &self.cargo_types, &mut rng);
+            }
+        }
+    }
+
+    pub fn refresh_all_markets(&mut self) {
+        let mut rng = rand::thread_rng();
+        for (airport_id, market) in self.markets.iter_mut() {
+            if let Some(airport) = self.airports.get(airport_id) {
+                MarketSystem::update_market_prices(market, airport, &self.cargo_types, &mut rng);
+            }
         }
     }
 }
