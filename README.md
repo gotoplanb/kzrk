@@ -8,5 +8,7 @@ A classic buy-low-sell-high trading game set in the aviation world, inspired by 
 
 ## Running
 
+1. `git clone https://github.com/gotoplanb/kzrk.git`
+1. `cd kzrk`
 1. `export KZRK_CHEAT=1` for unlimited fuel
 1. `cargo run`
