@@ -12,6 +12,7 @@ pub struct GameState {
     pub markets: HashMap<String, Market>,
     pub distance_cache: HashMap<(String, String), f64>,
     pub turn_number: u32,
+    pub cheat_mode: bool,
 }
 
 impl GameState {
@@ -19,6 +20,12 @@ impl GameState {
         airports: HashMap<String, Airport>,
         cargo_types: HashMap<String, CargoType>,
     ) -> Self {
+        // Check for cheat mode via environment variable
+        let cheat_mode = std::env::var("KZRK_CHEAT")
+            .map(|v| v.to_lowercase())
+            .map(|v| v == "1" || v == "true" || v == "on")
+            .unwrap_or(false);
+
         let mut game_state = Self {
             player: Player::new(10000, "ORD", 150, 500, 10.0), // $10k, ORD, 150 max fuel, 500kg cargo, 10km per fuel
             airports: airports.clone(),
@@ -26,6 +33,7 @@ impl GameState {
             markets: HashMap::new(),
             distance_cache: HashMap::new(),
             turn_number: 1,
+            cheat_mode,
         };
 
         // Pre-calculate all distances and initialize markets

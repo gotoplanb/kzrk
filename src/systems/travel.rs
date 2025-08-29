@@ -56,18 +56,27 @@ impl TravelSystem {
             .ok_or(TravelError::InvalidDestination)?
             .clone();
         
-        // Check if travel is possible
-        let fuel_needed = Self::can_travel_to(
-            &game_state.player,
-            &current_airport,
-            &destination_airport,
-        )?;
+        // Check if travel is possible (skip fuel check in cheat mode)
+        let fuel_needed = if game_state.cheat_mode {
+            0 // Always allow travel in cheat mode
+        } else {
+            Self::can_travel_to(
+                &game_state.player,
+                &current_airport,
+                &destination_airport,
+            )?
+        };
         
         // Calculate distance for travel info
         let distance = current_airport.distance_to(&destination_airport);
         
         // Execute the travel
-        game_state.player.consume_fuel(fuel_needed);
+        let actual_fuel_consumed = if game_state.cheat_mode {
+            0 // Cheat mode: no fuel consumption
+        } else {
+            game_state.player.consume_fuel(fuel_needed);
+            fuel_needed
+        };
         game_state.player.current_airport = destination_id.to_string();
         
         // Refresh market prices at new location (simulate market changes over time)
@@ -80,7 +89,7 @@ impl TravelSystem {
             from: current_airport.name.clone(),
             to: destination_airport.name.clone(),
             distance_km: distance,
-            fuel_consumed: fuel_needed,
+            fuel_consumed: actual_fuel_consumed,
             remaining_fuel: game_state.player.fuel,
         })
     }
@@ -95,7 +104,7 @@ impl TravelSystem {
             for destination in game_state.get_available_destinations() {
                 let distance = current_airport.distance_to(destination);
                 let fuel_needed = Self::calculate_fuel_needed(&game_state.player, distance);
-                let can_afford = game_state.player.fuel >= fuel_needed;
+                let can_afford = game_state.cheat_mode || game_state.player.fuel >= fuel_needed;
                 
                 destinations.push(DestinationInfo {
                     airport_id: destination.id.clone(),

@@ -7,12 +7,18 @@ impl TerminalUI {
     pub fn run_game_loop() {
         println!("=== KZRK Aviation Trading Game ===");
         println!("Welcome, pilot! Build your aviation trading empire.");
-        println!();
-
+        
         // Initialize game
         let airports = crate::data::get_default_airports();
         let cargo_types = crate::data::get_default_cargo_types();
         let mut game_state = GameState::new(airports, cargo_types);
+        
+        // Show cheat mode status if enabled
+        if game_state.cheat_mode {
+            println!("🔧 CHEAT MODE ENABLED: Unlimited fuel for travel!");
+            println!("   (Set via KZRK_CHEAT environment variable)");
+        }
+        println!();
 
         // Main game loop
         loop {
@@ -370,8 +376,13 @@ impl TerminalUI {
         println!("Available destinations:");
         for (i, dest) in destinations.iter().enumerate() {
             let status = if dest.can_afford { "✓" } else { "✗" };
-            println!("{}. {} {} - {:.0}km, {} fuel needed ({})", 
-                i + 1, status, dest.airport_name, dest.distance_km, dest.fuel_needed, dest.airport_id);
+            let cheat_indicator = if game_state.cheat_mode && !game_state.player.fuel >= dest.fuel_needed {
+                " 🔧"
+            } else {
+                ""
+            };
+            println!("{}. {} {} - {:.0}km, {} fuel needed ({}){}", 
+                i + 1, status, dest.airport_name, dest.distance_km, dest.fuel_needed, dest.airport_id, cheat_indicator);
         }
         
         println!("0. Back");
