@@ -37,4 +37,3 @@ trailing_semicolon = false
 # Miscellaneous
 use_field_init_shorthand = true
 use_try_shorthand = true
-edition = "2021"
