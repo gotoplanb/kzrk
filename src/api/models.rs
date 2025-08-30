@@ -4,13 +4,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GameSession {
-    pub session_id: Uuid,
-    pub player_id: String,
-    pub created_at: std::time::SystemTime,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateGameRequest {
     pub player_name: String,
     pub starting_money: Option<u32>,
