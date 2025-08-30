@@ -2,6 +2,10 @@
 name = "kzrk"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "A trading simulation game built in Rust"
+authors = ["Claude AI Assistant <noreply@anthropic.com>"]
+repository = "https://github.com/user/kzrk"
 
 [dependencies]
 rand = "0.8"
