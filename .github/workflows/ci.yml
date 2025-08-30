@@ -35,6 +35,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Check formatting
+      if: matrix.rust == 'nightly'
       run: cargo fmt --all -- --check
 
     - name: Run clippy
