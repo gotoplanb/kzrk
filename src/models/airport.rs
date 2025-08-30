@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketProfile {
-    pub produces: Vec<String>,    // Cargo types with lower buy prices
-    pub consumes: Vec<String>,    // Cargo types with higher sell prices
-    pub fuel_modifier: f32,       // Multiplier for base fuel price (1.0 = normal)
+    pub produces: Vec<String>, // Cargo types with lower buy prices
+    pub consumes: Vec<String>, // Cargo types with higher sell prices
+    pub fuel_modifier: f32,    // Multiplier for base fuel price (1.0 = normal)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,7 +66,7 @@ impl Airport {
     pub fn distance_to(&self, other: &Airport) -> f64 {
         let (lat1, lon1) = self.coordinates;
         let (lat2, lon2) = other.coordinates;
-        
+
         // Haversine formula for distance between two points on Earth
         let r = 6371.0; // Earth's radius in kilometers
         let dlat = (lat2 - lat1).to_radians();
@@ -76,7 +76,7 @@ impl Airport {
 
         let a = (dlat / 2.0).sin().powi(2) + lat1.cos() * lat2.cos() * (dlon / 2.0).sin().powi(2);
         let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-        
+
         r * c
     }
 }

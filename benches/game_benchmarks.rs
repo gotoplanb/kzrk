@@ -1,12 +1,13 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use kzrk::api::service::GameService;
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kzrk::api::models::*;
+use kzrk::api::service::GameService;
 use kzrk::data::{airports::get_default_airports, cargo_types::get_default_cargo_types};
 use kzrk::models::Player;
 
 fn bench_distance_calculations(c: &mut Criterion) {
     let airports = get_default_airports();
-    let airport_pairs: Vec<_> = airports.iter()
+    let airport_pairs: Vec<_> = airports
+        .iter()
         .flat_map(|(_, a1)| airports.values().map(move |a2| (a1, a2)))
         .collect();
 
@@ -21,31 +22,27 @@ fn bench_distance_calculations(c: &mut Criterion) {
     // Benchmark single distance calculation
     let jfk = &airports["JFK"];
     let lax = &airports["LAX"];
-    
+
     c.bench_function("single_distance_calculation", |b| {
-        b.iter(|| {
-            black_box(jfk.distance_to(lax))
-        });
+        b.iter(|| black_box(jfk.distance_to(lax)));
     });
 }
 
 fn bench_player_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("player_operations");
-    
+
     for money_amount in [1000, 10000, 100000].iter() {
         group.bench_with_input(
             BenchmarkId::new("player_creation", money_amount),
             money_amount,
             |b, &money| {
-                b.iter(|| {
-                    black_box(Player::new(money, "JFK", 200, 1000, 15.0))
-                });
-            }
+                b.iter(|| black_box(Player::new(money, "JFK", 200, 1000, 15.0)));
+            },
         );
     }
 
     let player = Player::new(10000, "JFK", 200, 1000, 15.0);
-    
+
     group.bench_function("spend_money", |b| {
         b.iter(|| {
             let mut p = player.clone();
@@ -107,7 +104,7 @@ fn bench_cargo_inventory_operations(c: &mut Criterion) {
     group.bench_function("get_quantity", |b| {
         let mut player = Player::new(10000, "JFK", 200, 1000, 15.0);
         player.cargo_inventory.add_cargo("electronics", 10);
-        
+
         b.iter(|| {
             black_box(player.cargo_inventory.get_quantity("electronics"));
         });
@@ -128,7 +125,7 @@ fn bench_cargo_inventory_operations(c: &mut Criterion) {
         player.cargo_inventory.add_cargo("electronics", 5);
         player.cargo_inventory.add_cargo("textiles", 3);
         player.cargo_inventory.add_cargo("luxury", 2);
-        
+
         b.iter(|| {
             black_box(player.cargo_inventory.total_weight(&cargo_types));
         });
@@ -197,7 +194,7 @@ fn bench_market_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("market_operations");
 
     use kzrk::models::Market;
-    
+
     group.bench_function("market_creation", |b| {
         b.iter(|| {
             black_box(Market::new("TEST", 100));
@@ -215,7 +212,7 @@ fn bench_market_operations(c: &mut Criterion) {
     group.bench_function("get_cargo_price", |b| {
         let mut market = Market::new("TEST", 100);
         market.set_cargo_price("electronics", 500);
-        
+
         b.iter(|| {
             black_box(market.get_cargo_price("electronics"));
         });
@@ -252,9 +249,9 @@ fn bench_data_loading(c: &mut Criterion) {
 
 fn bench_game_state_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("game_state");
-    
+
     use kzrk::systems::GameState;
-    
+
     group.bench_function("game_state_creation", |b| {
         b.iter(|| {
             let airports = get_default_airports();
@@ -285,7 +282,7 @@ fn bench_realistic_scenarios(c: &mut Criterion) {
     group.bench_function("complete_trading_round", |b| {
         b.iter(|| {
             let service = GameService::new();
-            
+
             // Create game
             let create_request = CreateGameRequest {
                 player_name: "Scenario Player".to_string(),

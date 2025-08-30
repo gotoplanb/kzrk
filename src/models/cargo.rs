@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CargoType {
@@ -11,7 +11,13 @@ pub struct CargoType {
 }
 
 impl CargoType {
-    pub fn new(id: &str, name: &str, base_price: u32, weight_per_unit: u32, volatility: f32) -> Self {
+    pub fn new(
+        id: &str,
+        name: &str,
+        base_price: u32,
+        weight_per_unit: u32,
+        volatility: f32,
+    ) -> Self {
         Self {
             id: id.to_string(),
             name: name.to_string(),
@@ -44,13 +50,14 @@ impl CargoInventory {
 
     pub fn remove_cargo(&mut self, cargo_id: &str, quantity: u32) -> bool {
         if let Some(current) = self.inventory.get_mut(cargo_id)
-            && *current >= quantity {
-                *current -= quantity;
-                if *current == 0 {
-                    self.inventory.remove(cargo_id);
-                }
-                return true;
+            && *current >= quantity
+        {
+            *current -= quantity;
+            if *current == 0 {
+                self.inventory.remove(cargo_id);
             }
+            return true;
+        }
         false
     }
 

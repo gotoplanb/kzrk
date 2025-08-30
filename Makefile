@@ -24,8 +24,8 @@ fmt-check:
 	@echo "Checking code formatting..."
 	cargo fmt --all -- --check
 
-# Run clippy lints
-lint:
+# Run clippy lints and check formatting
+lint: fmt-check
 	@echo "Running clippy lints..."
 	cargo clippy --all-targets --all-features -- -D warnings
 

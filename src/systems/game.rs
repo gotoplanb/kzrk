@@ -1,7 +1,7 @@
 use crate::models::{Airport, CargoType, Market, Player};
 use crate::systems::MarketSystem;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub type DistanceCache = HashMap<(String, String), f64>;
 
@@ -40,28 +40,30 @@ impl GameState {
         // Pre-calculate all distances and initialize markets
         game_state.initialize_distance_cache();
         game_state.initialize_markets();
-        
+
         game_state
     }
 
     fn initialize_distance_cache(&mut self) {
         let airport_ids: Vec<String> = self.airports.keys().cloned().collect();
-        
+
         for i in 0..airport_ids.len() {
             for j in i..airport_ids.len() {
                 let id1 = &airport_ids[i];
                 let id2 = &airport_ids[j];
-                
+
                 if i == j {
                     self.distance_cache.insert((id1.clone(), id2.clone()), 0.0);
                 } else {
                     let airport1 = &self.airports[id1];
                     let airport2 = &self.airports[id2];
                     let distance = airport1.distance_to(airport2);
-                    
+
                     // Store both directions
-                    self.distance_cache.insert((id1.clone(), id2.clone()), distance);
-                    self.distance_cache.insert((id2.clone(), id1.clone()), distance);
+                    self.distance_cache
+                        .insert((id1.clone(), id2.clone()), distance);
+                    self.distance_cache
+                        .insert((id2.clone(), id1.clone()), distance);
                 }
             }
         }
@@ -69,12 +71,15 @@ impl GameState {
 
     fn initialize_markets(&mut self) {
         let mut rng = rand::thread_rng();
-        self.markets = MarketSystem::initialize_all_markets(&self.airports, &self.cargo_types, &mut rng);
+        self.markets =
+            MarketSystem::initialize_all_markets(&self.airports, &self.cargo_types, &mut rng);
     }
 
     #[allow(dead_code)]
     pub fn get_distance(&self, from: &str, to: &str) -> Option<f64> {
-        self.distance_cache.get(&(from.to_string(), to.to_string())).copied()
+        self.distance_cache
+            .get(&(from.to_string(), to.to_string()))
+            .copied()
     }
 
     pub fn get_current_airport(&self) -> Option<&Airport> {
@@ -121,10 +126,11 @@ impl GameState {
     pub fn refresh_current_market(&mut self) {
         let current_airport_id = self.player.current_airport.clone();
         if let Some(airport) = self.airports.get(&current_airport_id)
-            && let Some(market) = self.markets.get_mut(&current_airport_id) {
-                let mut rng = rand::thread_rng();
-                MarketSystem::update_market_prices(market, airport, &self.cargo_types, &mut rng);
-            }
+            && let Some(market) = self.markets.get_mut(&current_airport_id)
+        {
+            let mut rng = rand::thread_rng();
+            MarketSystem::update_market_prices(market, airport, &self.cargo_types, &mut rng);
+        }
     }
 
     #[allow(dead_code)]

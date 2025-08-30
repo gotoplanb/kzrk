@@ -106,7 +106,7 @@ pub async fn get_available_airports(
     State(_service): State<GameService>,
 ) -> Json<Vec<serde_json::Value>> {
     use crate::data::airports::get_default_airports;
-    
+
     let airports = get_default_airports();
     let airport_list: Vec<serde_json::Value> = airports
         .iter()
@@ -119,7 +119,7 @@ pub async fn get_available_airports(
             })
         })
         .collect();
-    
+
     Json(airport_list)
 }
 
@@ -127,7 +127,7 @@ pub async fn get_available_cargo(
     State(_service): State<GameService>,
 ) -> Json<Vec<serde_json::Value>> {
     use crate::data::cargo_types::get_default_cargo_types;
-    
+
     let cargo_types = get_default_cargo_types();
     let cargo_list: Vec<serde_json::Value> = cargo_types
         .iter()
@@ -141,6 +141,6 @@ pub async fn get_available_cargo(
             })
         })
         .collect();
-    
+
     Json(cargo_list)
 }
