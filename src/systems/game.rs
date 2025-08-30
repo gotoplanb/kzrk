@@ -1,8 +1,9 @@
 use crate::models::{Airport, CargoType, Market, Player};
 use crate::systems::MarketSystem;
 use std::collections::HashMap;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
+
+pub type DistanceCache = HashMap<(String, String), f64>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
@@ -10,7 +11,7 @@ pub struct GameState {
     pub airports: HashMap<String, Airport>,
     pub cargo_types: HashMap<String, CargoType>,
     pub markets: HashMap<String, Market>,
-    pub distance_cache: HashMap<(String, String), f64>,
+    pub distance_cache: DistanceCache,
     pub turn_number: u32,
     pub cheat_mode: bool,
 }
@@ -71,6 +72,7 @@ impl GameState {
         self.markets = MarketSystem::initialize_all_markets(&self.airports, &self.cargo_types, &mut rng);
     }
 
+    #[allow(dead_code)]
     pub fn get_distance(&self, from: &str, to: &str) -> Option<f64> {
         self.distance_cache.get(&(from.to_string(), to.to_string())).copied()
     }
@@ -83,6 +85,7 @@ impl GameState {
         self.markets.get(&self.player.current_airport)
     }
 
+    #[allow(dead_code)]
     pub fn get_current_market_mut(&mut self) -> Option<&mut Market> {
         self.markets.get_mut(&self.player.current_airport)
     }
@@ -117,14 +120,14 @@ impl GameState {
 
     pub fn refresh_current_market(&mut self) {
         let current_airport_id = self.player.current_airport.clone();
-        if let Some(airport) = self.airports.get(&current_airport_id) {
-            if let Some(market) = self.markets.get_mut(&current_airport_id) {
+        if let Some(airport) = self.airports.get(&current_airport_id)
+            && let Some(market) = self.markets.get_mut(&current_airport_id) {
                 let mut rng = rand::thread_rng();
                 MarketSystem::update_market_prices(market, airport, &self.cargo_types, &mut rng);
             }
-        }
     }
 
+    #[allow(dead_code)]
     pub fn refresh_all_markets(&mut self) {
         let mut rng = rand::thread_rng();
         for (airport_id, market) in self.markets.iter_mut() {

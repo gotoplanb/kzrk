@@ -78,11 +78,10 @@ impl TerminalUI {
         if current_weight > 0 {
             println!("Carrying:");
             for (cargo_id, quantity) in game_state.player.cargo_inventory.get_all_cargo() {
-                if *quantity > 0 {
-                    if let Some(cargo_type) = game_state.cargo_types.get(cargo_id) {
+                if *quantity > 0
+                    && let Some(cargo_type) = game_state.cargo_types.get(cargo_id) {
                         println!("  {} x{}", cargo_type.name, quantity);
                     }
-                }
             }
         }
         
@@ -269,12 +268,11 @@ impl TerminalUI {
         };
         
         for (i, (cargo_id, quantity)) in sellable_cargo.iter().enumerate() {
-            if let Some(cargo_type) = game_state.cargo_types.get(*cargo_id) {
-                if let Some(price) = market.get_cargo_price(cargo_id) {
+            if let Some(cargo_type) = game_state.cargo_types.get(*cargo_id)
+                && let Some(price) = market.get_cargo_price(cargo_id) {
                     println!("{}. {} x{} - ${}/unit (total: ${})", 
                         i + 1, cargo_type.name, quantity, price, price * *quantity);
                 }
-            }
         }
         
         println!("0. Back");

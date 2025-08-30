@@ -4,6 +4,6 @@ pub mod market;
 pub mod player;
 
 pub use airport::Airport;
-pub use cargo::{CargoType, CargoInventory};
+pub use cargo::CargoType;
 pub use market::Market;
 pub use player::Player;

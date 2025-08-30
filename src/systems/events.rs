@@ -38,6 +38,12 @@ pub struct GameStatistics {
     pub efficiency_score: f32,
 }
 
+impl Default for GameStatistics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameStatistics {
     pub fn new() -> Self {
         Self {
@@ -70,6 +76,11 @@ impl GameStatistics {
         self.net_profit = self.total_revenue.saturating_sub(self.total_expenses);
     }
     
+    pub fn record_cargo_purchase(&mut self, expense: u32) {
+        self.record_purchase(expense);
+        self.cargo_trades += 1;
+    }
+    
     pub fn record_fuel_purchase(&mut self, fuel_amount: u32, cost: u32) {
         self.fuel_purchased += fuel_amount;
         self.record_purchase(cost);
@@ -82,6 +93,7 @@ impl GameStatistics {
         }
     }
     
+    #[allow(dead_code)]
     pub fn calculate_efficiency(&mut self, turns: u32) {
         if turns > 0 {
             self.efficiency_score = self.net_profit as f32 / turns as f32;
@@ -89,8 +101,10 @@ impl GameStatistics {
     }
 }
 
+#[allow(dead_code)]
 pub struct EventSystem;
 
+#[allow(dead_code)]
 impl EventSystem {
     pub fn generate_random_event(
         airports: &HashMap<String, Airport>,

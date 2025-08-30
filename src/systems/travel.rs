@@ -122,6 +122,7 @@ impl TravelSystem {
     }
     
     /// Calculate travel cost in fuel for a given route
+    #[allow(dead_code)]
     pub fn calculate_travel_cost(
         game_state: &GameState,
         destination_id: &str,
@@ -140,6 +141,7 @@ pub struct TravelInfo {
     pub to: String,
     pub distance_km: f64,
     pub fuel_consumed: u32,
+    #[allow(dead_code)]
     pub remaining_fuel: u32,
 }
 

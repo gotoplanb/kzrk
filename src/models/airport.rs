@@ -16,7 +16,18 @@ pub struct Airport {
     pub market_profile: MarketProfile,
 }
 
+pub struct AirportConfig {
+    pub id: String,
+    pub name: String,
+    pub coordinates: (f64, f64),
+    pub base_fuel_price: u32,
+    pub produces: Vec<String>,
+    pub consumes: Vec<String>,
+    pub fuel_modifier: f32,
+}
+
 impl Airport {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: &str,
         name: &str,
@@ -26,15 +37,28 @@ impl Airport {
         consumes: Vec<String>,
         fuel_modifier: f32,
     ) -> Self {
-        Self {
+        let config = AirportConfig {
             id: id.to_string(),
             name: name.to_string(),
             coordinates,
             base_fuel_price,
+            produces,
+            consumes,
+            fuel_modifier,
+        };
+        Self::from_config(config)
+    }
+
+    pub fn from_config(config: AirportConfig) -> Self {
+        Self {
+            id: config.id,
+            name: config.name,
+            coordinates: config.coordinates,
+            base_fuel_price: config.base_fuel_price,
             market_profile: MarketProfile {
-                produces,
-                consumes,
-                fuel_modifier,
+                produces: config.produces,
+                consumes: config.consumes,
+                fuel_modifier: config.fuel_modifier,
             },
         }
     }

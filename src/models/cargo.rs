@@ -43,15 +43,14 @@ impl CargoInventory {
     }
 
     pub fn remove_cargo(&mut self, cargo_id: &str, quantity: u32) -> bool {
-        if let Some(current) = self.inventory.get_mut(cargo_id) {
-            if *current >= quantity {
+        if let Some(current) = self.inventory.get_mut(cargo_id)
+            && *current >= quantity {
                 *current -= quantity;
                 if *current == 0 {
                     self.inventory.remove(cargo_id);
                 }
                 return true;
             }
-        }
         false
     }
 
@@ -71,6 +70,7 @@ impl CargoInventory {
         &self.inventory
     }
 
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.inventory.is_empty()
     }

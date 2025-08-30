@@ -98,6 +98,6 @@ fn test_complete_trading_scenario() {
     // Verify profit was made
     let expected_profit = (300 - 100) * 3; // 200 profit per unit * 3 units = 600
     let final_money_change = player.money as i32 - 5000;
-    let expected_final_change = expected_profit as i32 - fuel_cost as i32;
+    let expected_final_change = expected_profit - fuel_cost as i32;
     assert_eq!(final_money_change, expected_final_change);
 }

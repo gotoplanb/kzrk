@@ -7,11 +7,18 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 pub type GameSessions = Arc<Mutex<HashMap<Uuid, GameState>>>;
+pub type GameStatsStorage = Arc<Mutex<HashMap<Uuid, GameStatistics>>>;
 
 #[derive(Clone)]
 pub struct GameService {
     sessions: GameSessions,
-    statistics: Arc<Mutex<HashMap<Uuid, GameStatistics>>>,
+    statistics: GameStatsStorage,
+}
+
+impl Default for GameService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GameService {
@@ -167,7 +174,7 @@ impl GameService {
                 {
                     let mut stats = self.statistics.lock().map_err(|_| "Failed to acquire statistics lock")?;
                     if let Some(game_stats) = stats.get_mut(&session_id) {
-                        game_stats.record_purchase(transaction_amount);
+                        game_stats.record_cargo_purchase(transaction_amount);
                     }
                 }
             }

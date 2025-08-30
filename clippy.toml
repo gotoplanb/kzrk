@@ -1,0 +1,14 @@
+# Clippy configuration for enhanced linting
+
+# Set the maximum allowed cyclomatic complexity
+cognitive-complexity-threshold = 25
+
+# Enable additional restrictions
+disallowed-names = ["foo", "bar", "baz"]
+
+# Performance and style
+too-many-arguments-threshold = 5
+type-complexity-threshold = 100
+
+# Pedantic checks to enable
+warn-on-all-wildcard-imports = true

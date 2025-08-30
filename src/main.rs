@@ -8,7 +8,6 @@ use api::{routes::create_router, service::GameService};
 use std::env;
 use tower_http::cors::CorsLayer;
 use tracing::{info, Level};
-use tracing_subscriber;
 use ui::TerminalUI;
 
 #[tokio::main]
