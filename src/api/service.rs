@@ -1,10 +1,16 @@
-use crate::api::models::*;
-use crate::data::{airports::get_default_airports, cargo_types::get_default_cargo_types};
-use crate::models::Player;
-use crate::systems::{GameState, GameStatistics};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
 use uuid::Uuid;
+
+use crate::{
+    api::models::*,
+    data::{airports::get_default_airports, cargo_types::get_default_cargo_types},
+    models::Player,
+    systems::{GameState, GameStatistics},
+};
 
 pub type GameSessions = Arc<Mutex<HashMap<Uuid, GameState>>>;
 pub type GameStatsStorage = Arc<Mutex<HashMap<Uuid, GameStatistics>>>;

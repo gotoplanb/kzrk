@@ -1,6 +1,6 @@
-use kzrk::models::market::Market;
-use kzrk::models::player::Player;
 use std::time::Instant;
+
+use kzrk::models::{market::Market, player::Player};
 
 #[test]
 fn test_player_operations_performance() {

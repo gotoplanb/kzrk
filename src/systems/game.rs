@@ -1,7 +1,11 @@
-use crate::models::{Airport, CargoType, Market, Player};
-use crate::systems::MarketSystem;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    models::{Airport, CargoType, Market, Player},
+    systems::MarketSystem,
+};
 
 pub type DistanceCache = HashMap<(String, String), f64>;
 
@@ -28,7 +32,7 @@ impl GameState {
             .unwrap_or(false);
 
         let mut game_state = Self {
-            player: Player::new(10000, "ORD", 150, 500, 10.0), // $10k, ORD, 150 max fuel, 500kg cargo, 10km per fuel
+            player: Player::new(10000, "ORD", 150, 500, 10.0), /* $10k, ORD, 150 max fuel, 500kg cargo, 10km per fuel */
             airports: airports.clone(),
             cargo_types,
             markets: HashMap::new(),

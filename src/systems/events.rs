@@ -1,7 +1,9 @@
-use crate::models::{Airport, CargoType, Market};
+use std::collections::HashMap;
+
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::models::{Airport, CargoType, Market};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketEvent {

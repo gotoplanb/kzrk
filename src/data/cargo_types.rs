@@ -1,5 +1,6 @@
-use crate::models::CargoType;
 use std::collections::HashMap;
+
+use crate::models::CargoType;
 
 pub fn get_default_cargo_types() -> HashMap<String, CargoType> {
     let mut cargo_types = HashMap::new();

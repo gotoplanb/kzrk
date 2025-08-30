@@ -1,5 +1,7 @@
-use crate::models::{Airport, Player};
-use crate::systems::GameState;
+use crate::{
+    models::{Airport, Player},
+    systems::GameState,
+};
 
 #[derive(Debug, Clone)]
 pub enum TravelError {

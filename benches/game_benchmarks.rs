@@ -1,8 +1,9 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use kzrk::api::models::*;
-use kzrk::api::service::GameService;
-use kzrk::data::{airports::get_default_airports, cargo_types::get_default_cargo_types};
-use kzrk::models::Player;
+use kzrk::{
+    api::{models::*, service::GameService},
+    data::{airports::get_default_airports, cargo_types::get_default_cargo_types},
+    models::Player,
+};
 
 fn bench_distance_calculations(c: &mut Criterion) {
     let airports = get_default_airports();

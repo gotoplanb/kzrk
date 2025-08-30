@@ -1,5 +1,6 @@
-use crate::systems::{GameState, TradingSystem, TravelSystem};
 use std::io::{self, Write};
+
+use crate::systems::{GameState, TradingSystem, TravelSystem};
 
 pub struct TerminalUI;
 

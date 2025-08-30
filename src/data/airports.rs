@@ -1,5 +1,6 @@
-use crate::models::Airport;
 use std::collections::HashMap;
+
+use crate::models::Airport;
 
 pub fn get_default_airports() -> HashMap<String, Airport> {
     let mut airports = HashMap::new();

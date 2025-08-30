@@ -1,5 +1,6 @@
-use super::cargo::CargoInventory;
 use serde::{Deserialize, Serialize};
+
+use super::cargo::CargoInventory;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
@@ -89,8 +90,9 @@ impl Player {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
+
+    use super::*;
 
     fn create_test_player() -> Player {
         Player::new(1000, "TEST", 100, 500, 10.0)

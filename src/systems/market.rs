@@ -1,6 +1,8 @@
-use crate::models::{Airport, CargoType, Market};
-use rand::Rng;
 use std::collections::HashMap;
+
+use rand::Rng;
+
+use crate::models::{Airport, CargoType, Market};
 
 pub struct MarketSystem;
 

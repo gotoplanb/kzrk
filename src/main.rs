@@ -4,8 +4,9 @@ mod models;
 mod systems;
 mod ui;
 
-use api::{routes::create_router, service::GameService};
 use std::env;
+
+use api::{routes::create_router, service::GameService};
 use tower_http::cors::CorsLayer;
 use tracing::{Level, info};
 use ui::TerminalUI;

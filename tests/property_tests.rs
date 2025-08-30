@@ -1,5 +1,7 @@
-use kzrk::data::{airports::get_default_airports, cargo_types::get_default_cargo_types};
-use kzrk::models::{Airport, Player};
+use kzrk::{
+    data::{airports::get_default_airports, cargo_types::get_default_cargo_types},
+    models::{Airport, Player},
+};
 use proptest::prelude::*;
 
 // Property-based tests for game mechanics consistency

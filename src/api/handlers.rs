@@ -1,11 +1,11 @@
-use crate::api::models::*;
-use crate::api::service::GameService;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::Json,
 };
 use uuid::Uuid;
+
+use crate::api::{models::*, service::GameService};
 
 pub async fn create_game(
     State(service): State<GameService>,

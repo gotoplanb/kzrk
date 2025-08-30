@@ -1,10 +1,13 @@
-use kzrk::api::{routes::create_router, service::GameService};
-use kzrk::data::cargo_types::get_default_cargo_types;
-use kzrk::models::Player;
+use std::time::Duration;
+
+use kzrk::{
+    api::{routes::create_router, service::GameService},
+    data::cargo_types::get_default_cargo_types,
+    models::Player,
+};
 use reqwest::Client;
 use rstest::rstest;
 use serde_json::{Value, json};
-use std::time::Duration;
 use tokio::time::sleep;
 use uuid::Uuid;
 

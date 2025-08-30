@@ -1,6 +1,7 @@
-use kzrk::data::cargo_types::get_default_cargo_types;
-use kzrk::models::market::Market;
-use kzrk::models::player::Player;
+use kzrk::{
+    data::cargo_types::get_default_cargo_types,
+    models::{market::Market, player::Player},
+};
 
 #[test]
 fn test_player_market_interaction() {

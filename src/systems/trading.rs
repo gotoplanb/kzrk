@@ -1,5 +1,6 @@
-use crate::models::{CargoType, Market, Player};
 use std::collections::HashMap;
+
+use crate::models::{CargoType, Market, Player};
 
 #[derive(Debug, Clone)]
 pub enum TradingError {

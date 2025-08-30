@@ -1,6 +1,6 @@
+use std::{collections::HashMap, time::SystemTime};
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::SystemTime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Market {

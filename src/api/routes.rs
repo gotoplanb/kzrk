@@ -1,9 +1,9 @@
-use crate::api::handlers;
-use crate::api::service::GameService;
 use axum::{
     Router,
     routing::{get, post},
 };
+
+use crate::api::{handlers, service::GameService};
 
 pub fn create_router(service: GameService) -> Router {
     Router::new()

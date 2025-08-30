@@ -1,7 +1,8 @@
+use std::time::Duration;
+
 use kzrk::api::{routes::create_router, service::GameService};
 use reqwest::Client;
 use serde_json::{Value, json};
-use std::time::Duration;
 use tokio::time::sleep;
 use uuid::Uuid;
 
