@@ -14,15 +14,15 @@ impl Default for Scene {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Location {
-    MainDesk,        // General info, fuel status, overview
-    MarketBoard,     // View current prices
-    TradingDesk,     // Buy/sell cargo
-    FlightPlanning,  // Travel to other airports
-    FuelPump,        // Buy fuel
-    // Future locations:
-    // Hangar,       // Plane upgrades
-    // WeatherStation, // Weather info
-    // RadioRoom,    // Communications
+    MainDesk,       // General info, fuel status, overview
+    MarketBoard,    // View current prices
+    TradingDesk,    // Buy/sell cargo
+    FlightPlanning, // Travel to other airports
+    FuelPump,       // Buy fuel
+                    // Future locations:
+                    // Hangar,       // Plane upgrades
+                    // WeatherStation, // Weather info
+                    // RadioRoom,    // Communications
 }
 
 impl Default for Location {
@@ -35,14 +35,14 @@ impl Default for Location {
 pub struct SceneState {
     pub current_scene: Scene,
     pub current_location: Location,
-    
+
     // UI-only state for trading
     pub selected_cargo: Option<String>,
     pub trade_quantity: u32,
-    
+
     // UI-only state for travel
     pub selected_destination: Option<String>,
-    
+
     // UI state for fuel purchase
     pub fuel_quantity: u32,
 }
@@ -58,14 +58,14 @@ impl SceneState {
             fuel_quantity: 10,
         }
     }
-    
+
     pub fn go_to_location(&mut self, location: Location) {
         self.current_location = location;
         // Reset UI state when changing locations
         self.selected_cargo = None;
         self.selected_destination = None;
     }
-    
+
     pub fn travel_to_airport(&mut self, airport_id: String) {
         self.current_scene = Scene::Airport(airport_id);
         self.current_location = Location::MainDesk; // Always arrive at main desk

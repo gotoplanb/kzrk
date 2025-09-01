@@ -65,7 +65,7 @@ fn run_egui_game() {
             .with_title("KZRK Aviation Trading Game"),
         ..Default::default()
     };
-    
+
     if let Err(e) = eframe::run_native(
         "KZRK Aviation Trading",
         options,

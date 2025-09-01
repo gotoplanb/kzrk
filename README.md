@@ -12,10 +12,30 @@ A classic buy-low-sell-high trading game set in the aviation world, inspired by 
 
 1. `git clone https://github.com/gotoplanb/kzrk.git`
 1. `cd kzrk`
-1. `export KZRK_CHEAT=1` for unlimited fuel
-1. `cargo run` - CLI mode (default)
-1. `cargo run --features gui gui` - GUI mode (egui-based)
-1. `cargo run api` - REST API server mode
+1. Choose your preferred mode:
+
+### CLI Mode (Default)
+```bash
+cargo run                    # Terminal-based interface
+export KZRK_CHEAT=1 cargo run  # With cheat mode (unlimited fuel)
+```
+
+### GUI Mode (egui-based)
+```bash
+cargo run --features gui gui    # Sierra Online-style GUI interface
+KZRK_CHEAT=1 cargo run --features gui gui  # GUI with cheat mode
+```
+Features a classic adventure game interface with:
+- Scene-based navigation through airport FBO locations
+- Visual market boards with price analysis
+- Enhanced trading desk with transaction previews
+- Interactive flight planning with destination details
+- Professional fuel pump interface
+
+### API Server Mode
+```bash
+cargo run api               # REST API server on localhost:3000
+```
 
 ## Testing
 
