@@ -11,6 +11,9 @@ use tower_http::cors::CorsLayer;
 use tracing::{Level, info};
 use ui::TerminalUI;
 
+#[cfg(feature = "gui")]
+use ui::egui_app::KzrkEguiApp;
+
 #[tokio::main]
 async fn main() {
     // Initialize tracing
@@ -20,6 +23,8 @@ async fn main() {
 
     if args.len() > 1 && args[1] == "api" {
         run_api_server().await;
+    } else if args.len() > 1 && args[1] == "gui" {
+        run_egui_game();
     } else {
         run_cli_game();
     }
@@ -49,6 +54,31 @@ async fn run_api_server() {
     axum::serve(listener, app)
         .await
         .expect("Failed to start server");
+}
+
+#[cfg(feature = "gui")]
+fn run_egui_game() {
+    println!("Starting KZRK GUI game...");
+    let options = eframe::NativeOptions {
+        viewport: eframe::egui::ViewportBuilder::default()
+            .with_inner_size([800.0, 600.0])
+            .with_title("KZRK Aviation Trading Game"),
+        ..Default::default()
+    };
+    
+    if let Err(e) = eframe::run_native(
+        "KZRK Aviation Trading",
+        options,
+        Box::new(|_cc| Ok(Box::new(KzrkEguiApp::new()))),
+    ) {
+        eprintln!("Failed to run egui app: {}", e);
+    }
+}
+
+#[cfg(not(feature = "gui"))]
+fn run_egui_game() {
+    eprintln!("GUI feature not enabled. Compile with --features gui");
+    std::process::exit(1);
 }
 
 fn run_cli_game() {

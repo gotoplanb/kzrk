@@ -13,7 +13,8 @@ A classic buy-low-sell-high trading game set in the aviation world, inspired by 
 1. `git clone https://github.com/gotoplanb/kzrk.git`
 1. `cd kzrk`
 1. `export KZRK_CHEAT=1` for unlimited fuel
-1. `cargo run` - CLI mode
+1. `cargo run` - CLI mode (default)
+1. `cargo run --features gui gui` - GUI mode (egui-based)
 1. `cargo run api` - REST API server mode
 
 ## Testing
