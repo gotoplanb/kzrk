@@ -6,6 +6,7 @@ all-features = true
 [advisories]
 ignore = [
     "RUSTSEC-2024-0384", # instant crate is unmaintained, but only used in dev deps
+    "RUSTSEC-2024-0436", # paste crate is unmaintained, but still functional
 ]
 
 [licenses]
@@ -15,9 +16,13 @@ allow = [
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    "BSL-1.0",
     "ISC",
+    "LicenseRef-UFL-1.0",
+    "OFL-1.1",
     "Unicode-DFS-2016",
     "Unicode-3.0",
+    "Zlib",
 ]
 confidence-threshold = 0.8
 
