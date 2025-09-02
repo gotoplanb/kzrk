@@ -6,7 +6,6 @@ pub mod server_connection;
 pub enum Scene {
     ServerConnection,
     RoomLobby,
-    MainMenu,
     Airport(String), // airport_id
 }
 
