@@ -366,6 +366,9 @@ impl KzrkEguiApp {
             distance_cache,
             turn_number: multiplayer_state.turn_number,
             cheat_mode: false,
+            stats: crate::models::GameStats::new(5000), // Default starting money
+            win_condition_money: 100000,                // Default win condition
+            active_events: Vec::new(),
         })
     }
 
