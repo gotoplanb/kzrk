@@ -1,5 +1,5 @@
 use crate::{
-    api::models::RoomInfo,
+    api::models::{PlayerSessionInfo, RoomInfo},
     ui::{
         game_api_client::{ApiError, GameApiClient},
         scenes::Scene,
@@ -21,6 +21,8 @@ pub struct RoomLobbyScene {
     pub lobby_state: LobbyState,
     pub available_rooms: Vec<RoomInfo>,
     pub player_name: String,
+    pub previous_player_name: String,
+    pub existing_sessions: Vec<PlayerSessionInfo>,
     pub create_room_name: String,
     pub create_room_max_players: usize,
     pub error_message: Option<String>,
@@ -33,6 +35,8 @@ impl Default for RoomLobbyScene {
             lobby_state: LobbyState::Loading,
             available_rooms: Vec::new(),
             player_name: "Player".to_string(),
+            previous_player_name: String::new(),
+            existing_sessions: Vec::new(),
             create_room_name: "My Game Room".to_string(),
             create_room_max_players: 4,
             error_message: None,
@@ -69,11 +73,43 @@ impl RoomLobbyScene {
             // Player name input
             ui.horizontal(|ui| {
                 ui.label("Your name:");
-                ui.text_edit_singleline(&mut self.player_name);
+                let response = ui.text_edit_singleline(&mut self.player_name);
+
+                // Check for existing sessions when player name changes
+                if response.changed() && self.player_name != self.previous_player_name {
+                    self.previous_player_name = self.player_name.clone();
+                    if !self.player_name.trim().is_empty() {
+                        self.check_existing_sessions(client);
+                    } else {
+                        self.existing_sessions.clear();
+                    }
+                }
+
                 if ui.button("🔄 Refresh Rooms").clicked() {
                     self.refresh_rooms(client);
                 }
             });
+
+            // Show existing sessions if any
+            if !self.existing_sessions.is_empty() {
+                ui.add_space(5.0);
+                ui.group(|ui| {
+                    ui.strong("🔄 Resume Previous Games:");
+                    ui.separator();
+                    for session in &self.existing_sessions {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("📍 {}", session.room_name));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.small_button("Resume").clicked() {
+                                    // Note: This would need proper async handling in a real app
+                                    // For now, we'll set the lobby state to indicate joining
+                                    self.lobby_state = LobbyState::JoiningRoom(session.room_id);
+                                }
+                            });
+                        });
+                    }
+                });
+            }
 
             ui.add_space(10.0);
 
@@ -202,50 +238,63 @@ impl RoomLobbyScene {
         transition
     }
 
-    fn refresh_rooms(&mut self, _client: &GameApiClient) {
+    fn refresh_rooms(&mut self, client: &GameApiClient) {
         self.lobby_state = LobbyState::Loading;
         self.last_refresh = std::time::Instant::now();
 
-        // In a real async app, you'd spawn a task here
-        // For now, we'll simulate with a placeholder
-        self.available_rooms.clear();
-        self.lobby_state = LobbyState::ShowingRooms;
-
-        // TODO: Implement actual async room fetching
-        // let rooms_future = client.list_rooms();
-        // In egui, you'd typically use something like poll_promise or async runtime
+        match client.list_rooms_sync() {
+            Ok(rooms) => {
+                self.available_rooms = rooms;
+                self.lobby_state = LobbyState::ShowingRooms;
+            },
+            Err(err) => {
+                self.available_rooms.clear();
+                self.lobby_state = LobbyState::Error(format!("Failed to fetch rooms: {}", err));
+            },
+        }
     }
 
-    fn create_room_sync(&mut self, _client: &GameApiClient) -> Result<GameSession, ApiError> {
-        // In a real async GUI app, you'd use proper async/await
-        // For now, this is a placeholder that would need proper async handling
-
-        // Simulated response for testing
-        let room_id = Uuid::new_v4();
-        let player_id = Uuid::new_v4();
+    fn create_room_sync(&mut self, client: &GameApiClient) -> Result<GameSession, ApiError> {
+        let response = client.create_room_sync(
+            self.create_room_name.clone(),
+            self.player_name.clone(),
+            Some(self.create_room_max_players), // Use configured max players
+        )?;
 
         Ok(GameSession {
-            room_id,
-            player_id,
-            player_name: self.player_name.clone(),
+            room_id: response.room_id,
+            player_id: response.host_player_id,
+            player_name: response.host_player_name,
         })
     }
 
     fn join_room_sync(
         &mut self,
-        _client: &GameApiClient,
+        client: &GameApiClient,
         room_id: Uuid,
     ) -> Result<GameSession, ApiError> {
-        // In a real async GUI app, you'd use proper async/await
-        // For now, this is a placeholder that would need proper async handling
-
-        // Simulated response for testing
-        let player_id = Uuid::new_v4();
+        let response = client.join_room_sync(
+            room_id,
+            self.player_name.clone(),
+            Some("JFK".to_string()), // Default starting airport
+        )?;
 
         Ok(GameSession {
-            room_id,
-            player_id,
-            player_name: self.player_name.clone(),
+            room_id: response.room_id,
+            player_id: response.player_id,
+            player_name: response.player_name,
         })
+    }
+
+    fn check_existing_sessions(&mut self, _client: &GameApiClient) {
+        // In a real async GUI app, you'd use proper async/await to call:
+        // client.find_player_sessions(&self.player_name)
+        // For now, this is a placeholder that simulates finding sessions
+
+        // Clear existing sessions first
+        self.existing_sessions.clear();
+
+        // TODO: Implement actual API call when proper async support is added
+        // This would make an HTTP GET request to /players/{player_name}/sessions
     }
 }

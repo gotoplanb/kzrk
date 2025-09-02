@@ -11,7 +11,8 @@ use crate::{
     },
 };
 
-pub type DistanceCache = HashMap<(String, String), f64>;
+// Use a string key for JSON serialization compatibility
+pub type DistanceCache = HashMap<String, f64>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
@@ -90,17 +91,18 @@ impl GameState {
                 let id2 = &airport_ids[j];
 
                 if i == j {
-                    self.distance_cache.insert((id1.clone(), id2.clone()), 0.0);
+                    let key = format!("{}-{}", id1, id2);
+                    self.distance_cache.insert(key, 0.0);
                 } else {
                     let airport1 = &self.airports[id1];
                     let airport2 = &self.airports[id2];
                     let distance = airport1.distance_to(airport2);
 
                     // Store both directions
-                    self.distance_cache
-                        .insert((id1.clone(), id2.clone()), distance);
-                    self.distance_cache
-                        .insert((id2.clone(), id1.clone()), distance);
+                    let key1 = format!("{}-{}", id1, id2);
+                    let key2 = format!("{}-{}", id2, id1);
+                    self.distance_cache.insert(key1, distance);
+                    self.distance_cache.insert(key2, distance);
                 }
             }
         }
@@ -114,9 +116,8 @@ impl GameState {
 
     #[allow(dead_code)]
     pub fn get_distance(&self, from: &str, to: &str) -> Option<f64> {
-        self.distance_cache
-            .get(&(from.to_string(), to.to_string()))
-            .copied()
+        let key = format!("{}-{}", from, to);
+        self.distance_cache.get(&key).copied()
     }
 
     pub fn get_current_airport(&self) -> Option<&Airport> {

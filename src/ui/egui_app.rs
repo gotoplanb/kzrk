@@ -353,7 +353,8 @@ impl KzrkEguiApp {
                     // Calculate distance using the airport coordinates
                     let distance =
                         Self::calculate_distance(from_airport.coordinates, to_airport.coordinates);
-                    distance_cache.insert((from_id.clone(), to_id.clone()), distance);
+                    let key = format!("{}-{}", from_id, to_id);
+                    distance_cache.insert(key, distance);
                 }
             }
         }

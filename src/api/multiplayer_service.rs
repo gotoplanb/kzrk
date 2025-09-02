@@ -6,7 +6,7 @@ use std::{
 use uuid::Uuid;
 
 use crate::{
-    api::models::*,
+    api::{database::Database, models::*},
     data::{airports::get_default_airports, cargo_types::get_default_cargo_types},
     systems::{GameRoom, PlayerSession},
 };
@@ -18,6 +18,7 @@ pub type PlayerSessions = Arc<Mutex<HashMap<Uuid, PlayerSession>>>;
 pub struct MultiplayerGameService {
     rooms: GameRooms,
     player_sessions: PlayerSessions,
+    db: Arc<Mutex<Database>>,
 }
 
 impl Default for MultiplayerGameService {
@@ -28,9 +29,70 @@ impl Default for MultiplayerGameService {
 
 impl MultiplayerGameService {
     pub fn new() -> Self {
+        let db = Database::new("kzrk_multiplayer.db")
+            .or_else(|_| Database::in_memory())
+            .expect("Failed to create database");
+
+        let mut service = Self {
+            rooms: Arc::new(Mutex::new(HashMap::new())),
+            player_sessions: Arc::new(Mutex::new(HashMap::new())),
+            db: Arc::new(Mutex::new(db)),
+        };
+
+        // Load persisted rooms and sessions on startup
+        service.load_persisted_state();
+
+        service
+    }
+
+    #[allow(dead_code)]
+    pub fn new_in_memory() -> Self {
+        let db = Database::in_memory().expect("Failed to create in-memory database");
+
+        // Don't load persisted state for in-memory instance
         Self {
             rooms: Arc::new(Mutex::new(HashMap::new())),
             player_sessions: Arc::new(Mutex::new(HashMap::new())),
+            db: Arc::new(Mutex::new(db)),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn new_with_db_path(db_path: &str) -> Self {
+        let db = Database::new(db_path).expect("Failed to create database with custom path");
+        let mut service = Self {
+            rooms: Arc::new(Mutex::new(HashMap::new())),
+            player_sessions: Arc::new(Mutex::new(HashMap::new())),
+            db: Arc::new(Mutex::new(db)),
+        };
+        // Load persisted state
+        service.load_persisted_state();
+        service
+    }
+
+    fn load_persisted_state(&mut self) {
+        if let Ok(db) = self.db.lock() {
+            // Load rooms
+            if let Ok(rooms) = db.load_all_rooms() {
+                *self.rooms.lock().unwrap() = rooms;
+            }
+
+            // Load sessions
+            if let Ok(sessions) = db.load_all_sessions() {
+                *self.player_sessions.lock().unwrap() = sessions;
+            }
+        }
+    }
+
+    fn save_room(&self, room: &GameRoom) {
+        if let Ok(db) = self.db.lock() {
+            let _ = db.save_room(room);
+        }
+    }
+
+    fn save_session(&self, session: &PlayerSession) {
+        if let Ok(db) = self.db.lock() {
+            let _ = db.save_session(session);
         }
     }
 
@@ -61,15 +123,6 @@ impl MultiplayerGameService {
 
         let room_id = room.id;
 
-        // Store the room
-        {
-            let mut rooms = self
-                .rooms
-                .lock()
-                .map_err(|_| "Failed to acquire rooms lock")?;
-            rooms.insert(room_id, room);
-        }
-
         // Create player session for host
         let player_session = PlayerSession {
             player_id: host_player_id,
@@ -78,13 +131,26 @@ impl MultiplayerGameService {
             connected_at: chrono::Utc::now(),
         };
 
+        // Store the room and session
+        {
+            let mut rooms = self
+                .rooms
+                .lock()
+                .map_err(|_| "Failed to acquire rooms lock")?;
+            rooms.insert(room_id, room.clone());
+        }
+
         {
             let mut sessions = self
                 .player_sessions
                 .lock()
                 .map_err(|_| "Failed to acquire sessions lock")?;
-            sessions.insert(host_player_id, player_session);
+            sessions.insert(host_player_id, player_session.clone());
         }
+
+        // Save room and session to database
+        self.save_room(&room);
+        self.save_session(&player_session);
 
         Ok(CreateRoomResponse {
             room_id,
@@ -163,8 +229,11 @@ impl MultiplayerGameService {
                 .player_sessions
                 .lock()
                 .map_err(|_| "Failed to acquire sessions lock")?;
-            sessions.insert(player_id, player_session);
+            sessions.insert(player_id, player_session.clone());
         }
+
+        // Save session to database
+        self.save_session(&player_session);
 
         Ok(JoinRoomResponse {
             room_id,
@@ -185,9 +254,13 @@ impl MultiplayerGameService {
             if let Some(room) = rooms.get_mut(&room_id) {
                 room.remove_player(player_id)?;
 
-                // If room is empty, remove it
+                // If room is empty, save it to database but keep it available for rejoining
                 if room.players.is_empty() {
-                    rooms.remove(&room_id);
+                    room.game_status = crate::systems::GameStatus::WaitingForPlayers;
+                    self.save_room(room);
+                } else {
+                    // Save room state after player leaves
+                    self.save_room(room);
                 }
             }
         }
@@ -203,10 +276,53 @@ impl MultiplayerGameService {
             }
         }
 
+        // Save changes to database - room may have been removed, session updated
+        // We'll save the session state change but room removal is handled above
+
         Ok(LeaveRoomResponse {
             success: true,
             message: "Successfully left room".to_string(),
         })
+    }
+
+    pub fn find_player_sessions(
+        &self,
+        player_name: &str,
+    ) -> Result<Vec<PlayerSessionInfo>, String> {
+        let rooms = self
+            .rooms
+            .lock()
+            .map_err(|_| "Failed to acquire rooms lock")?;
+
+        let db = self
+            .db
+            .lock()
+            .map_err(|_| "Failed to acquire database lock")?;
+        let sessions = db
+            .find_sessions_by_player_name(player_name)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        let matching_sessions: Vec<PlayerSessionInfo> = sessions
+            .iter()
+            .filter(|session| session.game_room_id.is_some())
+            .map(|session| {
+                let room_name = session
+                    .game_room_id
+                    .and_then(|room_id| rooms.get(&room_id))
+                    .map(|room| room.name.clone())
+                    .unwrap_or_else(|| "Unknown Room".to_string());
+
+                PlayerSessionInfo {
+                    player_id: session.player_id,
+                    player_name: session.player_name.clone(),
+                    room_id: session.game_room_id.unwrap(),
+                    room_name,
+                    connected_at: session.connected_at,
+                }
+            })
+            .collect();
+
+        Ok(matching_sessions)
     }
 
     pub fn get_room_state(
@@ -324,6 +440,13 @@ impl MultiplayerGameService {
         // Advance turn and potentially generate events
         room.advance_turn();
 
+        // Save room state after travel
+        if let Ok(rooms) = self.rooms.lock()
+            && let Some(room) = rooms.get(&room_id)
+        {
+            self.save_room(room);
+        }
+
         Ok(PlayerTravelResponse {
             success: true,
             message: format!("Traveled to {} ({})", destination_airport_name, destination),
@@ -437,6 +560,13 @@ impl MultiplayerGameService {
                     stats.record_cargo_purchase(transaction_amount);
                 }
 
+                // Save room state after buying cargo
+                if let Ok(rooms) = self.rooms.lock()
+                    && let Some(room) = rooms.get(&room_id)
+                {
+                    self.save_room(room);
+                }
+
                 Ok(PlayerTradeResponse {
                     success: true,
                     message: format!(
@@ -478,6 +608,13 @@ impl MultiplayerGameService {
                 // Update statistics
                 if let Some(stats) = room.player_statistics.get_mut(&player_id) {
                     stats.record_sale(&request.cargo_type, transaction_amount);
+                }
+
+                // Save room state after selling cargo
+                if let Ok(rooms) = self.rooms.lock()
+                    && let Some(room) = rooms.get(&room_id)
+                {
+                    self.save_room(room);
                 }
 
                 Ok(PlayerTradeResponse {
@@ -557,6 +694,13 @@ impl MultiplayerGameService {
         // Update statistics
         if let Some(stats) = room.player_statistics.get_mut(&player_id) {
             stats.record_fuel_purchase(request.quantity, fuel_cost);
+        }
+
+        // Save room state after fuel purchase
+        if let Ok(rooms) = self.rooms.lock()
+            && let Some(room) = rooms.get(&room_id)
+        {
+            self.save_room(room);
         }
 
         Ok(PlayerFuelResponse {

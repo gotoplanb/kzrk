@@ -146,3 +146,20 @@ pub async fn player_buy_fuel(
         )),
     }
 }
+
+pub async fn find_player_sessions(
+    State(service): State<MultiplayerGameService>,
+    Path(player_name): Path<String>,
+) -> Result<Json<Vec<PlayerSessionInfo>>, (StatusCode, Json<ErrorResponse>)> {
+    match service.find_player_sessions(&player_name) {
+        Ok(sessions) => Ok(Json(sessions)),
+        Err(error) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "FindPlayerSessionsError".to_string(),
+                message: error,
+                details: None,
+            }),
+        )),
+    }
+}

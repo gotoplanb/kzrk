@@ -34,6 +34,16 @@ impl From<serde_json::Error> for ApiError {
     }
 }
 
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ApiError::NetworkError(msg) => write!(f, "Network error: {}", msg),
+            ApiError::ParseError(msg) => write!(f, "Parse error: {}", msg),
+            ApiError::ServerError(msg) => write!(f, "Server error: {}", msg),
+        }
+    }
+}
+
 #[allow(dead_code)]
 impl GameApiClient {
     pub fn new(server_address: String) -> Self {
@@ -291,6 +301,103 @@ impl GameApiClient {
         }
 
         let result: serde_json::Value = response.json().await?;
+        Ok(result)
+    }
+
+    // Synchronous versions for GUI using curl (when gui feature is enabled)
+    #[cfg(feature = "gui")]
+    pub fn list_rooms_sync(&self) -> Result<Vec<RoomInfo>, ApiError> {
+        let output = std::process::Command::new("curl")
+            .arg("-s") // silent
+            .arg("-X")
+            .arg("GET")
+            .arg(format!("{}/rooms", self.base_url))
+            .output()
+            .map_err(|e| ApiError::NetworkError(format!("Failed to execute curl: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(ApiError::NetworkError("Curl command failed".to_string()));
+        }
+
+        let response_text = String::from_utf8(output.stdout)
+            .map_err(|e| ApiError::ParseError(format!("Invalid UTF-8 response: {}", e)))?;
+
+        let result: Vec<RoomInfo> = serde_json::from_str(&response_text)?;
+        Ok(result)
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn create_room_sync(
+        &self,
+        name: String,
+        host_player_name: String,
+        max_players: Option<usize>,
+    ) -> Result<CreateRoomResponse, ApiError> {
+        let request = CreateRoomRequest {
+            name,
+            host_player_name,
+            max_players,
+        };
+
+        let request_json = serde_json::to_string(&request)?;
+
+        let output = std::process::Command::new("curl")
+            .arg("-s") // silent
+            .arg("-X")
+            .arg("POST")
+            .arg("-H")
+            .arg("Content-Type: application/json")
+            .arg("-d")
+            .arg(request_json)
+            .arg(format!("{}/rooms", self.base_url))
+            .output()
+            .map_err(|e| ApiError::NetworkError(format!("Failed to execute curl: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(ApiError::NetworkError("Curl command failed".to_string()));
+        }
+
+        let response_text = String::from_utf8(output.stdout)
+            .map_err(|e| ApiError::ParseError(format!("Invalid UTF-8 response: {}", e)))?;
+
+        let result: CreateRoomResponse = serde_json::from_str(&response_text)?;
+        Ok(result)
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn join_room_sync(
+        &self,
+        room_id: Uuid,
+        player_name: String,
+        starting_airport: Option<String>,
+    ) -> Result<JoinRoomResponse, ApiError> {
+        let request = JoinRoomRequest {
+            player_name,
+            starting_airport,
+        };
+
+        let request_json = serde_json::to_string(&request)?;
+
+        let output = std::process::Command::new("curl")
+            .arg("-s") // silent
+            .arg("-X")
+            .arg("POST")
+            .arg("-H")
+            .arg("Content-Type: application/json")
+            .arg("-d")
+            .arg(request_json)
+            .arg(format!("{}/rooms/{}/join", self.base_url, room_id))
+            .output()
+            .map_err(|e| ApiError::NetworkError(format!("Failed to execute curl: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(ApiError::NetworkError("Curl command failed".to_string()));
+        }
+
+        let response_text = String::from_utf8(output.stdout)
+            .map_err(|e| ApiError::ParseError(format!("Invalid UTF-8 response: {}", e)))?;
+
+        let result: JoinRoomResponse = serde_json::from_str(&response_text)?;
         Ok(result)
     }
 }

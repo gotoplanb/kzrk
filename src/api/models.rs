@@ -208,6 +208,15 @@ pub struct LeaveRoomResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlayerSessionInfo {
+    pub player_id: Uuid,
+    pub player_name: String,
+    pub room_id: Uuid,
+    pub room_name: String,
+    pub connected_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiplayerGameStateResponse {
     pub room_info: RoomInfo,
     pub my_player_id: Uuid,

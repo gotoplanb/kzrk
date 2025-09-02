@@ -20,7 +20,7 @@ pub struct GameRoom {
     pub player_statistics: HashMap<Uuid, GameStatistics>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub enum GameStatus {
     #[default]
     WaitingForPlayers,
