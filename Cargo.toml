@@ -18,12 +18,14 @@ tower-http = { version = "0.5", features = ["cors", "trace"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
 eframe = { version = "0.29", optional = true }
 egui_extras = { version = "0.29", features = ["image"], optional = true }
+reqwest = { version = "0.11", features = ["json"], optional = true }
 
 [features]
 default = ["terminal"]
-gui = ["dep:eframe", "dep:egui_extras"]
+gui = ["dep:eframe", "dep:egui_extras", "dep:reqwest"]
 terminal = []
 
 [dev-dependencies]

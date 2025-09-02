@@ -32,9 +32,41 @@ Features a classic adventure game interface with:
 - Interactive flight planning with destination details
 - Professional fuel pump interface
 
-### API Server Mode
+### Multiplayer Mode
+Play with friends! One person runs a server, others connect with GUI clients:
+
+#### Server (Host)
 ```bash
-cargo run api               # REST API server on localhost:3000
+cargo run api               # Start multiplayer server on localhost:3000
+```
+
+#### Client (Players)
+```bash
+cargo run --features gui gui    # Launch GUI client
+```
+
+**How it works:**
+1. **Host starts the server**: The host runs `cargo run api` to start the multiplayer server
+2. **Players connect**: Each player runs `cargo run --features gui gui` and enters the server address (default: `127.0.0.1:3000`)
+3. **Create or join rooms**: Players can create new game rooms or join existing ones
+4. **Play together**: Up to 8 players per room, with shared world state and real-time market updates
+
+**Features:**
+- Room-based multiplayer (1-8 players per room)
+- Real-time player position tracking
+- Shared market economics - your trades affect other players' prices
+- Host can be any player - no special privileges required
+- Automatic room discovery and joining
+- Player name validation and collision handling
+
+**Network Setup:**
+- **Local play**: Use default `127.0.0.1:3000` (host and all players on same machine/network)
+- **Remote play**: Host needs to share their IP address (e.g., `192.168.1.100:3000`)
+- **Firewall**: Make sure port 3000 is open on the host machine
+
+### API Server Mode (Single Player)
+```bash
+cargo run api               # REST API server on localhost:3000 (for development)
 ```
 
 ## Testing

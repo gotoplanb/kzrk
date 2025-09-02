@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -450,6 +452,7 @@ impl GameService {
 
         Ok(GameStateResponse {
             player: PlayerInfo {
+                id: None,
                 name: "Player".to_string(), // TODO: Get actual player name
                 money: game_state.player.money,
                 current_airport: game_state.player.current_airport.clone(),
@@ -477,6 +480,9 @@ impl GameService {
                     .current_cargo_weight(&game_state.cargo_types),
                 max_cargo_weight: game_state.player.max_cargo_weight,
                 fuel_efficiency: game_state.player.fuel_efficiency,
+                is_online: None,
+                last_seen: None,
+                is_host: None,
             },
             current_market: MarketInfo {
                 airport_id: current_market.airport_id.clone(),

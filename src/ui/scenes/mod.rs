@@ -1,14 +1,17 @@
 pub mod airport;
+pub mod room_lobby;
+pub mod server_connection;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scene {
-    MainMenu,
+    ServerConnection,
+    RoomLobby,
     Airport(String), // airport_id
 }
 
 impl Default for Scene {
     fn default() -> Self {
-        Self::MainMenu
+        Self::ServerConnection
     }
 }
 
@@ -50,7 +53,7 @@ pub struct SceneState {
 impl SceneState {
     pub fn new() -> Self {
         Self {
-            current_scene: Scene::Airport("ORD".to_string()), // Start at Chicago ORD
+            current_scene: Scene::ServerConnection, // Start at server connection
             current_location: Location::MainDesk,
             selected_cargo: None,
             trade_quantity: 1,
