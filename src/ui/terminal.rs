@@ -1,6 +1,9 @@
 use std::io::{self, Write};
 
-use crate::systems::{GameState, TradingSystem, TravelSystem};
+use crate::{
+    config::GameConfig,
+    systems::{GameState, SaveSystem, TradingSystem, TravelSystem},
+};
 
 pub struct TerminalUI;
 
@@ -8,11 +11,33 @@ impl TerminalUI {
     pub fn run_game_loop() {
         println!("=== KZRK Aviation Trading Game ===");
         println!("Welcome, pilot! Build your aviation trading empire.");
+        println!();
 
-        // Initialize game
-        let airports = crate::data::get_default_airports();
-        let cargo_types = crate::data::get_default_cargo_types();
-        let mut game_state = GameState::new(airports, cargo_types);
+        // Check for autosave and offer to load
+        let mut game_state = if SaveSystem::has_autosave() {
+            print!("Autosave detected. Would you like to continue your previous game? (y/n): ");
+            io::stdout().flush().unwrap();
+            let choice = Self::get_user_input();
+
+            if choice.trim().to_lowercase() == "y" {
+                match SaveSystem::load_autosave() {
+                    Ok(state) => {
+                        println!("Autosave loaded successfully!");
+                        state
+                    },
+                    Err(_) => {
+                        println!("Failed to load autosave. Starting new game...");
+                        Self::create_new_game()
+                    },
+                }
+            } else {
+                Self::create_new_game()
+            }
+        } else {
+            Self::create_new_game()
+        };
+
+        println!();
 
         // Show cheat mode status if enabled
         if game_state.cheat_mode {
@@ -47,11 +72,23 @@ impl TerminalUI {
                 },
                 MainMenuChoice::Travel => {
                     Self::handle_travel(&mut game_state);
+                    // Autosave after travel
+                    let _ = SaveSystem::autosave(&game_state);
+                },
+                MainMenuChoice::SaveGame => {
+                    Self::handle_save_game(&game_state);
+                },
+                MainMenuChoice::LoadGame => {
+                    if let Some(loaded_state) = Self::handle_load_game() {
+                        game_state = loaded_state;
+                        println!("Game loaded successfully!");
+                    }
                 },
                 MainMenuChoice::Help => {
                     Self::display_help();
                 },
                 MainMenuChoice::Quit => {
+                    Self::prompt_save_before_quit(&game_state);
                     println!("Thanks for playing KZRK! Safe travels, pilot.");
                     break;
                 },
@@ -86,6 +123,17 @@ impl TerminalUI {
             current_weight, game_state.player.max_cargo_weight
         );
 
+        // Display active market events
+        if !game_state.active_events.is_empty() {
+            println!("\n📰 MARKET EVENTS:");
+            for event in &game_state.active_events {
+                println!(
+                    "  {} ({}T remaining)",
+                    event.description, event.turns_remaining
+                );
+            }
+        }
+
         // Show carried cargo
         if current_weight > 0 {
             println!("Carrying:");
@@ -107,9 +155,11 @@ impl TerminalUI {
             println!("1. View Market");
             println!("2. Trade");
             println!("3. Travel");
-            println!("4. Help");
-            println!("5. Quit");
-            print!("Choose an option (1-5): ");
+            println!("4. Save Game");
+            println!("5. Load Game");
+            println!("6. Help");
+            println!("7. Quit");
+            print!("Choose an option (1-7): ");
             io::stdout().flush().unwrap();
 
             let choice = Self::get_user_input();
@@ -117,8 +167,10 @@ impl TerminalUI {
                 "1" => return MainMenuChoice::ViewMarket,
                 "2" => return MainMenuChoice::Trade,
                 "3" => return MainMenuChoice::Travel,
-                "4" => return MainMenuChoice::Help,
-                "5" => return MainMenuChoice::Quit,
+                "4" => return MainMenuChoice::SaveGame,
+                "5" => return MainMenuChoice::LoadGame,
+                "6" => return MainMenuChoice::Help,
+                "7" => return MainMenuChoice::Quit,
                 _ => {
                     println!("Invalid choice. Please try again.");
                     println!();
@@ -147,9 +199,29 @@ impl TerminalUI {
                         cargo_id,
                     );
 
+                    // Check if this cargo is affected by an event at this airport
+                    let event_indicator = game_state
+                        .active_events
+                        .iter()
+                        .find(|e| {
+                            e.affected_cargo == *cargo_id && e.affected_airport == market.airport_id
+                        })
+                        .map(|e| {
+                            if e.price_multiplier > 1.5 {
+                                " 🔥" // Hot/spike
+                            } else if e.price_multiplier < 0.7 {
+                                " 📉" // Crash
+                            } else if e.price_multiplier > 1.0 {
+                                " ⬆️" // Up
+                            } else {
+                                " ⬇️" // Down
+                            }
+                        })
+                        .unwrap_or("");
+
                     println!(
-                        "  {}: ${}/unit (can buy: {})",
-                        cargo_type.name, price, max_buyable
+                        "  {}: ${}/unit (can buy: {}){}",
+                        cargo_type.name, price, max_buyable, event_indicator
                     );
                 }
             }
@@ -249,6 +321,16 @@ impl TerminalUI {
                                             "✓ Bought {} {} for ${}",
                                             quantity, cargo_type.name, cost
                                         );
+                                        // Record the trade in statistics
+                                        game_state.stats.record_trade(
+                                            -(cost as i64),
+                                            cargo_id.to_string(),
+                                            quantity,
+                                            true,
+                                        );
+                                        game_state
+                                            .stats
+                                            .update_money_stats(game_state.player.money);
                                     }
                                 },
                                 Err(e) => println!("✗ Purchase failed: {:?}", e),
@@ -335,6 +417,17 @@ impl TerminalUI {
                                         "✓ Sold {} {} for ${}",
                                         quantity, cargo_type.name, revenue
                                     );
+                                    // Record the trade in statistics
+                                    // Since we don't track purchase price, we'll approximate profit
+                                    let estimated_cost = cargo_type.base_price * quantity;
+                                    let profit = revenue as i64 - estimated_cost as i64;
+                                    game_state.stats.record_trade(
+                                        profit,
+                                        cargo_id.to_string(),
+                                        quantity,
+                                        false,
+                                    );
+                                    game_state.stats.update_money_stats(game_state.player.money);
                                 }
                             },
                             Err(e) => println!("✗ Sale failed: {:?}", e),
@@ -382,6 +475,9 @@ impl TerminalUI {
                     match TradingSystem::buy_fuel(&mut game_state.player, &market, quantity) {
                         Ok(cost) => {
                             println!("✓ Bought {} fuel for ${}", quantity, cost);
+                            // Record fuel purchase in statistics
+                            game_state.stats.record_fuel_purchase(quantity);
+                            game_state.stats.update_money_stats(game_state.player.money);
                         },
                         Err(e) => println!("✗ Fuel purchase failed: {:?}", e),
                     }
@@ -463,6 +559,13 @@ impl TerminalUI {
                                 travel_info.distance_km, travel_info.fuel_consumed
                             );
                             println!("Arrived at {}! New market prices await.", travel_info.to);
+                            // Record travel in statistics
+                            game_state.stats.record_travel(
+                                travel_info.distance_km,
+                                travel_info.fuel_consumed,
+                                travel_info.from.clone(),
+                                travel_info.to.clone(),
+                            );
                         },
                         Err(e) => println!("✗ Travel failed: {:?}", e),
                     }
@@ -497,11 +600,49 @@ impl TerminalUI {
 
     fn display_victory(game_state: &GameState) {
         println!("🎉 CONGRATULATIONS! 🎉");
-        println!("You've reached $100,000 and won the game!");
-        println!("Final stats:");
-        println!("  Money: ${}", game_state.player.money);
-        println!("  Turns: {}", game_state.turn_number);
-        println!("  Final location: {}", game_state.player.current_airport);
+        println!(
+            "You've reached ${} and won the game!",
+            game_state.win_condition_money
+        );
+        println!();
+        println!("=== FINAL STATISTICS ===");
+        println!("📊 Performance:");
+        println!("  Final Money: ${}", game_state.player.money);
+        println!("  Peak Money: ${}", game_state.stats.peak_money);
+        println!("  Turns Played: {}", game_state.turn_number);
+        println!();
+        println!("📈 Trading:");
+        println!("  Total Trades: {}", game_state.stats.total_trades);
+        println!(
+            "  Success Rate: {:.1}%",
+            game_state.stats.get_success_rate()
+        );
+        println!("  Net Profit: ${}", game_state.stats.get_net_profit());
+        println!("  Best Trade: ${}", game_state.stats.best_trade_profit);
+        if game_state.stats.worst_trade_loss < 0 {
+            println!(
+                "  Worst Trade: ${}",
+                game_state.stats.worst_trade_loss.abs()
+            );
+        }
+        println!();
+        println!("✈️ Travel:");
+        println!(
+            "  Distance Traveled: {:.0} km",
+            game_state.stats.total_distance_traveled
+        );
+        println!(
+            "  Fuel Consumed: {} units",
+            game_state.stats.total_fuel_consumed
+        );
+        println!(
+            "  Fuel Efficiency: {:.1} km/unit",
+            game_state.stats.get_fuel_efficiency()
+        );
+        println!(
+            "  Airports Visited: {}",
+            game_state.stats.airports_visited.len()
+        );
         println!();
         println!("You are now a successful aviation trading mogul!");
         println!("Thanks for playing KZRK!");
@@ -510,13 +651,36 @@ impl TerminalUI {
     fn display_game_over(game_state: &GameState) {
         println!("💸 GAME OVER 💸");
         println!("You've run out of money and fuel. Your trading career has ended.");
-        println!("Final stats:");
-        println!("  Money: ${}", game_state.player.money);
+        println!();
+        println!("=== FINAL STATISTICS ===");
+        println!("📊 Performance:");
+        println!("  Final Money: ${}", game_state.player.money);
+        println!("  Peak Money: ${}", game_state.stats.peak_money);
         println!(
             "  Fuel: {}/{}",
             game_state.player.fuel, game_state.player.max_fuel
         );
-        println!("  Turns survived: {}", game_state.turn_number);
+        println!("  Turns Survived: {}", game_state.turn_number);
+        println!();
+        println!("📈 Trading:");
+        println!("  Total Trades: {}", game_state.stats.total_trades);
+        if game_state.stats.total_trades > 0 {
+            println!(
+                "  Success Rate: {:.1}%",
+                game_state.stats.get_success_rate()
+            );
+            println!("  Net Profit/Loss: ${}", game_state.stats.get_net_profit());
+        }
+        println!();
+        println!("✈️ Travel:");
+        println!(
+            "  Distance Traveled: {:.0} km",
+            game_state.stats.total_distance_traveled
+        );
+        println!(
+            "  Airports Visited: {}",
+            game_state.stats.airports_visited.len()
+        );
         println!();
         println!("Better luck next time, pilot!");
     }
@@ -529,10 +693,157 @@ impl TerminalUI {
         }
     }
 
+    fn select_difficulty() -> GameConfig {
+        println!("=== Select Difficulty ===");
+        println!("1. Easy   - $8000 start, full fuel, $50k to win");
+        println!("2. Normal - $5000 start, 2/3 fuel, $100k to win");
+        println!("3. Hard   - $3000 start, 1/2 fuel, $150k to win");
+        println!();
+        print!("Choose difficulty (1-3): ");
+        io::stdout().flush().unwrap();
+
+        loop {
+            let input = Self::get_user_input();
+            match input.as_str() {
+                "1" => {
+                    println!("Easy mode selected. Good luck, pilot!");
+                    return GameConfig::easy();
+                },
+                "2" => {
+                    println!("Normal mode selected. The skies await!");
+                    return GameConfig::normal();
+                },
+                "3" => {
+                    println!("Hard mode selected. Brave choice, pilot!");
+                    return GameConfig::hard();
+                },
+                _ => {
+                    print!("Invalid choice. Please enter 1, 2, or 3: ");
+                    io::stdout().flush().unwrap();
+                },
+            }
+        }
+    }
+
+    fn create_new_game() -> GameState {
+        // Select difficulty
+        let config = Self::select_difficulty();
+
+        // Initialize game
+        let airports = crate::data::get_default_airports();
+        let cargo_types = crate::data::get_default_cargo_types();
+        let game_state = GameState::new_with_config(airports, cargo_types, config.clone());
+
+        // Display selected difficulty settings
+        println!("\n=== Game Settings ===");
+        println!("Starting Money: ${}", config.starting_money);
+        println!("Win Condition: ${}", config.win_condition_money);
+        println!("Starting Airport: {}", config.starting_airport);
+
+        game_state
+    }
+
     fn press_enter_to_continue() {
         print!("Press Enter to continue...");
         io::stdout().flush().unwrap();
         let _ = Self::get_user_input();
+    }
+
+    fn handle_save_game(game_state: &GameState) {
+        println!("=== SAVE GAME ===");
+        print!("Enter save name (or press Enter for auto-generated): ");
+        io::stdout().flush().unwrap();
+
+        let save_name = Self::get_user_input();
+        let save_name = if save_name.trim().is_empty() {
+            None
+        } else {
+            Some(save_name.trim().to_string())
+        };
+
+        match SaveSystem::save_game(game_state, save_name) {
+            Ok(path) => {
+                println!("✓ Game saved successfully!");
+                println!("Save location: {}", path.display());
+            },
+            Err(e) => {
+                println!("✗ Failed to save game: {}", e);
+            },
+        }
+
+        Self::press_enter_to_continue();
+    }
+
+    fn handle_load_game() -> Option<GameState> {
+        println!("=== LOAD GAME ===");
+
+        // List available saves
+        match SaveSystem::list_saves() {
+            Ok(saves) => {
+                if saves.is_empty() {
+                    println!("No saved games found.");
+                    Self::press_enter_to_continue();
+                    return None;
+                }
+
+                println!("Available saves:");
+                for (i, save) in saves.iter().enumerate() {
+                    println!(
+                        "{}. {} - Turn {}, ${}, {} - {}",
+                        i + 1,
+                        save.name,
+                        save.turn,
+                        save.money,
+                        save.location,
+                        save.timestamp.format("%Y-%m-%d %H:%M")
+                    );
+                }
+
+                print!("\nEnter save number to load (or 0 to cancel): ");
+                io::stdout().flush().unwrap();
+
+                let choice = Self::get_user_input();
+                if let Ok(num) = choice.trim().parse::<usize>() {
+                    if num == 0 {
+                        return None;
+                    }
+                    if num > 0 && num <= saves.len() {
+                        let save = &saves[num - 1];
+                        match SaveSystem::load_game(&save.file_name) {
+                            Ok(state) => {
+                                return Some(state);
+                            },
+                            Err(e) => {
+                                println!("✗ Failed to load game: {}", e);
+                                Self::press_enter_to_continue();
+                            },
+                        }
+                    } else {
+                        println!("Invalid choice.");
+                        Self::press_enter_to_continue();
+                    }
+                } else {
+                    println!("Invalid input.");
+                    Self::press_enter_to_continue();
+                }
+            },
+            Err(e) => {
+                println!("✗ Failed to list saves: {}", e);
+                Self::press_enter_to_continue();
+            },
+        }
+
+        None
+    }
+
+    fn prompt_save_before_quit(game_state: &GameState) {
+        print!("Would you like to save before quitting? (y/n): ");
+        io::stdout().flush().unwrap();
+
+        let choice = Self::get_user_input();
+        if choice.trim().to_lowercase() == "y" {
+            Self::handle_save_game(game_state);
+        }
     }
 }
 
@@ -541,6 +852,8 @@ enum MainMenuChoice {
     ViewMarket,
     Trade,
     Travel,
+    SaveGame,
+    LoadGame,
     Help,
     Quit,
 }

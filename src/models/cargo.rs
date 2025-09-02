@@ -29,7 +29,7 @@ impl CargoType {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct CargoInventory {
     inventory: HashMap<String, u32>,
 }
