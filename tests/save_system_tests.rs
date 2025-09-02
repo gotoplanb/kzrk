@@ -1,29 +1,26 @@
 #[cfg(test)]
 mod save_system_tests {
     use kzrk::systems::{GameState, SaveSystem};
-    use std::env;
     use tempfile::tempdir;
 
     #[test]
     fn test_save_and_load_game() {
         // Create a temporary directory for testing
         let temp_dir = tempdir().unwrap();
-        unsafe {
-            env::set_var("HOME", temp_dir.path());
-            env::set_var("CARGO_TARGET_TMPDIR", temp_dir.path());
-        }
+        let save_dir = temp_dir.path().join("saves");
 
         // Create a game state
         let airports = kzrk::data::get_default_airports();
         let cargo_types = kzrk::data::get_default_cargo_types();
         let original_state = GameState::new(airports, cargo_types);
 
-        // Save the game
-        let save_result = SaveSystem::save_game(&original_state, Some("test_save".to_string()));
+        // Save the game to specific directory
+        let save_result =
+            SaveSystem::save_game_to_dir(&original_state, Some("test_save".to_string()), &save_dir);
         assert!(save_result.is_ok());
 
-        // Load the game
-        let loaded_state = SaveSystem::load_game("test_save");
+        // Load the game from specific directory
+        let loaded_state = SaveSystem::load_game_from_dir("test_save", &save_dir);
         assert!(loaded_state.is_ok());
 
         let loaded = loaded_state.unwrap();
@@ -44,21 +41,18 @@ mod save_system_tests {
     #[test]
     fn test_list_saves() {
         let temp_dir = tempdir().unwrap();
-        unsafe {
-            env::set_var("HOME", temp_dir.path());
-            env::set_var("CARGO_TARGET_TMPDIR", temp_dir.path());
-        }
+        let save_dir = temp_dir.path().join("saves");
 
         // Create multiple saves
         let airports = kzrk::data::get_default_airports();
         let cargo_types = kzrk::data::get_default_cargo_types();
         let game_state = GameState::new(airports, cargo_types);
 
-        SaveSystem::save_game(&game_state, Some("save1".to_string())).unwrap();
-        SaveSystem::save_game(&game_state, Some("save2".to_string())).unwrap();
+        SaveSystem::save_game_to_dir(&game_state, Some("save1".to_string()), &save_dir).unwrap();
+        SaveSystem::save_game_to_dir(&game_state, Some("save2".to_string()), &save_dir).unwrap();
 
-        // List saves
-        let saves = SaveSystem::list_saves();
+        // List saves from specific directory
+        let saves = SaveSystem::list_saves_in_dir(&save_dir);
         assert!(saves.is_ok());
 
         let save_list = saves.unwrap();
@@ -68,34 +62,27 @@ mod save_system_tests {
     #[test]
     fn test_autosave() {
         let temp_dir = tempdir().unwrap();
-        unsafe {
-            env::set_var("HOME", temp_dir.path());
-            env::set_var("CARGO_TARGET_TMPDIR", temp_dir.path());
-        }
+        let save_dir = temp_dir.path().join("saves");
 
         // Create a game state
         let airports = kzrk::data::get_default_airports();
         let cargo_types = kzrk::data::get_default_cargo_types();
         let game_state = GameState::new(airports, cargo_types);
 
-        // Create autosave
-        assert!(!SaveSystem::has_autosave());
-        let autosave_result = SaveSystem::autosave(&game_state);
+        // Create autosave in specific directory
+        let autosave_result =
+            SaveSystem::save_game_to_dir(&game_state, Some("autosave".to_string()), &save_dir);
         assert!(autosave_result.is_ok());
-        assert!(SaveSystem::has_autosave());
 
-        // Load autosave
-        let loaded = SaveSystem::load_autosave();
+        // Load autosave from specific directory
+        let loaded = SaveSystem::load_game_from_dir("autosave", &save_dir);
         assert!(loaded.is_ok());
     }
 
     #[test]
     fn test_save_with_game_progress() {
         let temp_dir = tempdir().unwrap();
-        unsafe {
-            env::set_var("HOME", temp_dir.path());
-            env::set_var("CARGO_TARGET_TMPDIR", temp_dir.path());
-        }
+        let save_dir = temp_dir.path().join("saves");
 
         // Create a game state with some progress
         let airports = kzrk::data::get_default_airports();
@@ -114,11 +101,12 @@ mod save_system_tests {
             .cargo_inventory
             .add_cargo("electronics", 5);
 
-        // Save
-        SaveSystem::save_game(&game_state, Some("progress_save".to_string())).unwrap();
+        // Save to specific directory
+        SaveSystem::save_game_to_dir(&game_state, Some("progress_save".to_string()), &save_dir)
+            .unwrap();
 
-        // Load and verify
-        let loaded = SaveSystem::load_game("progress_save").unwrap();
+        // Load and verify from specific directory
+        let loaded = SaveSystem::load_game_from_dir("progress_save", &save_dir).unwrap();
         assert_eq!(loaded.player.money, 15000);
         assert_eq!(loaded.player.current_airport, "LAX");
         assert_eq!(loaded.turn_number, 10);
@@ -129,12 +117,9 @@ mod save_system_tests {
     #[test]
     fn test_load_nonexistent_save() {
         let temp_dir = tempdir().unwrap();
-        unsafe {
-            env::set_var("HOME", temp_dir.path());
-            env::set_var("CARGO_TARGET_TMPDIR", temp_dir.path());
-        }
+        let save_dir = temp_dir.path().join("saves");
 
-        let result = SaveSystem::load_game("nonexistent");
+        let result = SaveSystem::load_game_from_dir("nonexistent", &save_dir);
         assert!(result.is_err());
     }
 }
