@@ -181,7 +181,7 @@ impl MultiplayerGameService {
                     id: room.id,
                     name: room.name.clone(),
                     host_player_name: host_player,
-                    current_players: room.players.len() as u32,
+                    current_players: room.players.values().filter(|p| p.is_online).count() as u32,
                     max_players: room.max_players as u32,
                     created_at: room.created_at,
                     game_status: room.game_status.clone(),
@@ -809,7 +809,7 @@ impl MultiplayerGameService {
                     .get(&room.host_player_id)
                     .map(|p| p.player_name.clone())
                     .unwrap_or_else(|| "Unknown".to_string()),
-                current_players: room.players.len() as u32,
+                current_players: room.players.values().filter(|p| p.is_online).count() as u32,
                 max_players: room.max_players as u32,
                 created_at: room.created_at,
                 game_status: room.game_status.clone(),
