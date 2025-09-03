@@ -4,35 +4,21 @@ A classic buy-low-sell-high trading game set in the aviation world, inspired by 
 
 [![codecov](https://codecov.io/github/gotoplanb/kzrk/branch/main/graph/badge.svg?token=F1KGS5JF3G)](https://codecov.io/github/gotoplanb/kzrk)
 
-## Dependencies
+## Quick Start - Play Locally
 
-1. Install Rust with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+Ready to play? Here's the fastest way to get started:
 
-## Running
+1. **Install Rust**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+2. **Clone repo**: `git clone https://github.com/gotoplanb/kzrk.git && cd kzrk`
+3. **Start server** (in terminal 1): `cargo run api`
+4. **Start GUI** (in terminal 2): `cargo run --features gui gui`
+5. **Play!** Connect to `127.0.0.1:3000`, create a room, and start trading
 
-1. `git clone https://github.com/gotoplanb/kzrk.git`
-1. `cd kzrk`
-1. Choose your preferred mode:
+That's it! The GUI will connect to your local server and you can play immediately.
 
-### CLI Mode (Default)
-```bash
-cargo run                    # Terminal-based interface
-export KZRK_CHEAT=1 cargo run  # With cheat mode (unlimited fuel)
-```
+## Game Modes
 
-### GUI Mode (egui-based)
-```bash
-cargo run --features gui gui    # Sierra Online-style GUI interface
-KZRK_CHEAT=1 cargo run --features gui gui  # GUI with cheat mode
-```
-Features a classic adventure game interface with:
-- Scene-based navigation through airport FBO locations
-- Visual market boards with price analysis
-- Enhanced trading desk with transaction previews
-- Interactive flight planning with destination details
-- Professional fuel pump interface
-
-### Multiplayer Mode
+### Multiplayer Mode (Recommended)
 Play with friends! One person runs a server, others connect with GUI clients:
 
 #### Server (Host)
@@ -51,28 +37,43 @@ cargo run --features gui gui    # Launch GUI client
 3. **Create or join rooms**: Players can create new game rooms or join existing ones
 4. **Play together**: Up to 8 players per room, with shared world state and real-time market updates
 
-**Features:**
-- Room-based multiplayer (1-8 players per room)
+**Multiplayer Features:**
+- Room-based gameplay (1-8 players per room)
 - Real-time player position tracking
 - Shared market economics - your trades affect other players' prices
+- Message board communication system at each airport
 - Host can be any player - no special privileges required
 - Automatic room discovery and joining
-- Player name validation and collision handling
+- Player rejoin functionality (players can leave and rejoin rooms)
 
 **Network Setup:**
 - **Local play**: Use default `127.0.0.1:3000` (host and all players on same machine/network)
 - **Remote play**: Host needs to share their IP address (e.g., `192.168.1.100:3000`)
 - **Firewall**: Make sure port 3000 is open on the host machine
 
-### API Server Mode (Single Player)
+### CLI Mode (Terminal-based)
 ```bash
-cargo run api               # REST API server on localhost:3000 (for development)
+cargo run                    # Terminal-based interface
+KZRK_CHEAT=1 cargo run      # With cheat mode (unlimited fuel)
 ```
+Classic single-player terminal experience for purists.
+
+## GUI Features
+
+The GUI client features a classic adventure game interface with:
+- Scene-based navigation through airport FBO locations
+- Visual market boards with price analysis
+- Enhanced trading desk with transaction previews
+- Interactive flight planning with destination details
+- Professional fuel pump interface
+- Airport message boards for player communication
+- Room lobby for multiplayer game management
 
 ## Testing
 
 ```bash
-cargo test                           # Run all tests
+make test                           # Run all tests (recommended)
+cargo test                          # Run all tests
 cargo test --test api_integration_tests  # Run API integration tests
 cargo test --test property_tests     # Run property-based tests
 cargo test --test error_scenario_tests   # Run error scenario tests
@@ -106,3 +107,15 @@ make lint                          # Format + clippy + audit + deny
 make bench                         # Run benchmarks
 make ci                           # Full CI pipeline locally
 ```
+
+## API Documentation
+
+The multiplayer server exposes a REST API for development and integration. See `API.md` for complete endpoint documentation.
+
+## Architecture
+
+- **CLI**: Terminal-based single-player experience
+- **GUI Client**: egui-based graphical interface that connects to multiplayer servers
+- **API Server**: Rust-based REST API server with SQLite persistence for multiplayer games
+- **Database**: SQLite for room and player state persistence
+- **Message System**: Airport-based message boards for player communication
