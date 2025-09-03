@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::GameConfig,
-    models::{Airport, CargoType, GameStats, Market, Player},
+    models::{Airport, CargoType, GameStats, Market, MessageBoard, Player},
     systems::{
         MarketSystem,
         events::{EventSystem, MarketEvent},
@@ -26,6 +26,7 @@ pub struct GameState {
     pub stats: GameStats,
     pub win_condition_money: u32,
     pub active_events: Vec<MarketEvent>,
+    pub message_board: MessageBoard,
 }
 
 impl GameState {
@@ -64,6 +65,7 @@ impl GameState {
             stats: GameStats::new(config.starting_money),
             win_condition_money: config.win_condition_money,
             active_events: Vec::new(),
+            message_board: MessageBoard::new(50),
         };
 
         // Initialize starting airport in stats

@@ -199,7 +199,7 @@ impl MultiplayerGameService {
         player_name: String,
         starting_airport: Option<String>,
     ) -> Result<JoinRoomResponse, String> {
-        let player_id = Uuid::new_v4();
+        let mut player_id = Uuid::new_v4();
 
         // Update the room
         {
@@ -213,7 +213,9 @@ impl MultiplayerGameService {
                 return Err("Room is not joinable".to_string());
             }
 
-            room.add_player(player_id, player_name.clone(), starting_airport)?;
+            let actual_player_id =
+                room.add_player(player_id, player_name.clone(), starting_airport)?;
+            player_id = actual_player_id;
         }
 
         // Create player session
@@ -252,16 +254,16 @@ impl MultiplayerGameService {
                 .lock()
                 .map_err(|_| "Failed to acquire rooms lock")?;
             if let Some(room) = rooms.get_mut(&room_id) {
-                room.remove_player(player_id)?;
+                room.mark_player_offline(player_id)?;
 
-                // If room is empty, save it to database but keep it available for rejoining
-                if room.players.is_empty() {
+                // Check if all players are offline
+                let all_offline = room.players.values().all(|p| !p.is_online);
+                if all_offline {
                     room.game_status = crate::systems::GameStatus::WaitingForPlayers;
-                    self.save_room(room);
-                } else {
-                    // Save room state after player leaves
-                    self.save_room(room);
                 }
+
+                // Save room state after player leaves
+                self.save_room(room);
             }
         }
 
@@ -441,11 +443,7 @@ impl MultiplayerGameService {
         room.advance_turn();
 
         // Save room state after travel
-        if let Ok(rooms) = self.rooms.lock()
-            && let Some(room) = rooms.get(&room_id)
-        {
-            self.save_room(room);
-        }
+        self.save_room(room);
 
         Ok(PlayerTravelResponse {
             success: true,
@@ -849,6 +847,95 @@ impl MultiplayerGameService {
             }
         }
         inv
+    }
+
+    pub fn post_message(
+        &self,
+        room_id: Uuid,
+        player_id: Uuid,
+        content: String,
+    ) -> Result<PostMessageResponse, String> {
+        let mut rooms = self
+            .rooms
+            .lock()
+            .map_err(|_| "Failed to acquire rooms lock")?;
+
+        let room = rooms.get_mut(&room_id).ok_or("Room not found")?;
+
+        // Verify player is in the room
+        let player_state = room
+            .players
+            .get(&player_id)
+            .ok_or("Player not in this room")?;
+
+        let player_name = player_state.player_name.clone();
+        let current_airport = player_state.player.current_airport.clone();
+
+        // Post the message to the board
+        match room
+            .message_board
+            .post_message(player_id, player_name, content, current_airport)
+        {
+            Ok(message) => {
+                // Save the room with the new message
+                self.save_room(room);
+
+                Ok(PostMessageResponse {
+                    success: true,
+                    message: "Message posted successfully".to_string(),
+                    message_id: Some(message.id),
+                })
+            },
+            Err(error) => Ok(PostMessageResponse {
+                success: false,
+                message: error,
+                message_id: None,
+            }),
+        }
+    }
+
+    pub fn get_messages(
+        &self,
+        room_id: Uuid,
+        player_id: Uuid,
+    ) -> Result<GetMessagesResponse, String> {
+        let rooms = self
+            .rooms
+            .lock()
+            .map_err(|_| "Failed to acquire rooms lock")?;
+
+        let room = rooms.get(&room_id).ok_or("Room not found")?;
+
+        // Verify player is in the room
+        let player_state = room
+            .players
+            .get(&player_id)
+            .ok_or("Player not in this room")?;
+
+        let current_airport = player_state.player.current_airport.clone();
+
+        // Get messages for the player's current airport
+        let messages = room.message_board.get_messages(&current_airport, Some(20));
+        let total_count = room.message_board.message_count(Some(&current_airport));
+
+        // Convert messages to MessageInfo
+        let message_infos: Vec<MessageInfo> = messages
+            .into_iter()
+            .map(|msg| MessageInfo {
+                id: msg.id,
+                author_id: msg.author_id,
+                author_name: msg.author_name.clone(),
+                content: msg.content.clone(),
+                airport_id: msg.airport_id.clone(),
+                created_at: msg.created_at,
+            })
+            .collect();
+
+        Ok(GetMessagesResponse {
+            messages: message_infos,
+            airport_id: current_airport,
+            total_count,
+        })
     }
 }
 

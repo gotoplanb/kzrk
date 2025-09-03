@@ -75,6 +75,9 @@ impl TerminalUI {
                     // Autosave after travel
                     let _ = SaveSystem::autosave(&game_state);
                 },
+                MainMenuChoice::MessageBoard => {
+                    Self::handle_message_board(&mut game_state);
+                },
                 MainMenuChoice::SaveGame => {
                     Self::handle_save_game(&game_state);
                 },
@@ -155,11 +158,12 @@ impl TerminalUI {
             println!("1. View Market");
             println!("2. Trade");
             println!("3. Travel");
-            println!("4. Save Game");
-            println!("5. Load Game");
-            println!("6. Help");
-            println!("7. Quit");
-            print!("Choose an option (1-7): ");
+            println!("4. Message Board");
+            println!("5. Save Game");
+            println!("6. Load Game");
+            println!("7. Help");
+            println!("8. Quit");
+            print!("Choose an option (1-8): ");
             io::stdout().flush().unwrap();
 
             let choice = Self::get_user_input();
@@ -167,10 +171,11 @@ impl TerminalUI {
                 "1" => return MainMenuChoice::ViewMarket,
                 "2" => return MainMenuChoice::Trade,
                 "3" => return MainMenuChoice::Travel,
-                "4" => return MainMenuChoice::SaveGame,
-                "5" => return MainMenuChoice::LoadGame,
-                "6" => return MainMenuChoice::Help,
-                "7" => return MainMenuChoice::Quit,
+                "4" => return MainMenuChoice::MessageBoard,
+                "5" => return MainMenuChoice::SaveGame,
+                "6" => return MainMenuChoice::LoadGame,
+                "7" => return MainMenuChoice::Help,
+                "8" => return MainMenuChoice::Quit,
                 _ => {
                     println!("Invalid choice. Please try again.");
                     println!();
@@ -749,6 +754,89 @@ impl TerminalUI {
         let _ = Self::get_user_input();
     }
 
+    fn handle_message_board(game_state: &mut GameState) {
+        use uuid::Uuid;
+
+        let current_airport = &game_state.player.current_airport;
+        println!("=== MESSAGE BOARD - {} ===", current_airport);
+        println!();
+
+        loop {
+            // Display recent messages
+            let messages = game_state
+                .message_board
+                .get_messages(current_airport, Some(10));
+            if messages.is_empty() {
+                println!("No messages at this airport yet.");
+            } else {
+                println!("Recent messages:");
+                println!("{}", "─".repeat(60));
+                for msg in messages {
+                    // Format the timestamp
+                    let time_ago = chrono::Utc::now().signed_duration_since(msg.created_at);
+                    let time_str = if time_ago.num_days() > 0 {
+                        format!("{} days ago", time_ago.num_days())
+                    } else if time_ago.num_hours() > 0 {
+                        format!("{} hours ago", time_ago.num_hours())
+                    } else if time_ago.num_minutes() > 0 {
+                        format!("{} minutes ago", time_ago.num_minutes())
+                    } else {
+                        "Just now".to_string()
+                    };
+
+                    println!("[{}] - {}", time_str, msg.author_name);
+                    println!("  {}", msg.content);
+                    println!();
+                }
+                println!("{}", "─".repeat(60));
+            }
+
+            println!();
+            println!("1. Post a message");
+            println!("2. Refresh");
+            println!("3. Back to main menu");
+            print!("Choose an option (1-3): ");
+            io::stdout().flush().unwrap();
+
+            let choice = Self::get_user_input();
+            match choice.trim() {
+                "1" => {
+                    print!("Enter your message (max 500 characters): ");
+                    io::stdout().flush().unwrap();
+                    let content = Self::get_user_input().trim().to_string();
+
+                    if !content.is_empty() {
+                        // For single-player, use a pseudo player ID and name
+                        let player_id = Uuid::new_v4();
+                        let player_name = format!("Pilot#{}", game_state.turn_number);
+
+                        match game_state.message_board.post_message(
+                            player_id,
+                            player_name,
+                            content,
+                            current_airport.clone(),
+                        ) {
+                            Ok(_) => println!("Message posted successfully!"),
+                            Err(e) => println!("Failed to post message: {}", e),
+                        }
+                    } else {
+                        println!("Message cannot be empty.");
+                    }
+                    println!();
+                },
+                "2" => {
+                    println!("Refreshing...");
+                    println!();
+                },
+                "3" => break,
+                _ => {
+                    println!("Invalid choice. Please try again.");
+                    println!();
+                },
+            }
+        }
+    }
+
     fn handle_save_game(game_state: &GameState) {
         println!("=== SAVE GAME ===");
         print!("Enter save name (or press Enter for auto-generated): ");
@@ -852,6 +940,7 @@ enum MainMenuChoice {
     ViewMarket,
     Trade,
     Travel,
+    MessageBoard,
     SaveGame,
     LoadGame,
     Help,

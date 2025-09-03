@@ -253,3 +253,32 @@ pub struct PlayerFuelResponse {
     pub new_fuel: Option<u32>,
     pub new_money: Option<u32>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostMessageRequest {
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostMessageResponse {
+    pub success: bool,
+    pub message: String,
+    pub message_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageInfo {
+    pub id: Uuid,
+    pub author_id: Uuid,
+    pub author_name: String,
+    pub content: String,
+    pub airport_id: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetMessagesResponse {
+    pub messages: Vec<MessageInfo>,
+    pub airport_id: String,
+    pub total_count: usize,
+}

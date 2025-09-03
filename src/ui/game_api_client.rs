@@ -391,13 +391,123 @@ impl GameApiClient {
             .map_err(|e| ApiError::NetworkError(format!("Failed to execute curl: {}", e)))?;
 
         if !output.status.success() {
-            return Err(ApiError::NetworkError("Curl command failed".to_string()));
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(ApiError::NetworkError(format!(
+                "Curl command failed: {}",
+                stderr
+            )));
         }
 
         let response_text = String::from_utf8(output.stdout)
             .map_err(|e| ApiError::ParseError(format!("Invalid UTF-8 response: {}", e)))?;
 
-        let result: JoinRoomResponse = serde_json::from_str(&response_text)?;
-        Ok(result)
+        // Log the response for debugging
+        eprintln!("Join room response: {}", response_text);
+
+        // Try to parse as JoinRoomResponse first
+        if let Ok(result) = serde_json::from_str::<JoinRoomResponse>(&response_text) {
+            Ok(result)
+        } else {
+            // If that fails, try to parse as ErrorResponse
+            if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
+                Err(ApiError::ServerError(error.message))
+            } else {
+                Err(ApiError::ParseError(format!(
+                    "Failed to parse JSON response as either success or error: '{}'",
+                    response_text
+                )))
+            }
+        }
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn post_message_sync(
+        &self,
+        room_id: uuid::Uuid,
+        player_id: uuid::Uuid,
+        content: String,
+    ) -> Result<PostMessageResponse, ApiError> {
+        let request = PostMessageRequest { content };
+
+        let request_json = serde_json::to_string(&request)?;
+
+        let output = std::process::Command::new("curl")
+            .arg("-s") // silent
+            .arg("-X")
+            .arg("POST")
+            .arg("-H")
+            .arg("Content-Type: application/json")
+            .arg("-d")
+            .arg(request_json)
+            .arg(format!("{}/rooms/{}/players/{}/messages", self.base_url, room_id, player_id))
+            .output()
+            .map_err(|e| ApiError::NetworkError(format!("Failed to execute curl: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(ApiError::NetworkError(format!(
+                "Curl command failed: {}",
+                stderr
+            )));
+        }
+
+        let response_text = String::from_utf8(output.stdout)
+            .map_err(|e| ApiError::ParseError(format!("Invalid UTF-8 response: {}", e)))?;
+
+        // Try to parse as PostMessageResponse first
+        if let Ok(result) = serde_json::from_str::<PostMessageResponse>(&response_text) {
+            Ok(result)
+        } else {
+            // If that fails, try to parse as ErrorResponse
+            if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
+                Err(ApiError::ServerError(error.message))
+            } else {
+                Err(ApiError::ParseError(format!(
+                    "Failed to parse JSON response as either success or error: '{}'",
+                    response_text
+                )))
+            }
+        }
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn get_messages_sync(
+        &self,
+        room_id: uuid::Uuid,
+        player_id: uuid::Uuid,
+    ) -> Result<GetMessagesResponse, ApiError> {
+        let output = std::process::Command::new("curl")
+            .arg("-s") // silent
+            .arg("-X")
+            .arg("GET")
+            .arg(format!("{}/rooms/{}/players/{}/messages", self.base_url, room_id, player_id))
+            .output()
+            .map_err(|e| ApiError::NetworkError(format!("Failed to execute curl: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(ApiError::NetworkError(format!(
+                "Curl command failed: {}",
+                stderr
+            )));
+        }
+
+        let response_text = String::from_utf8(output.stdout)
+            .map_err(|e| ApiError::ParseError(format!("Invalid UTF-8 response: {}", e)))?;
+
+        // Try to parse as GetMessagesResponse first
+        if let Ok(result) = serde_json::from_str::<GetMessagesResponse>(&response_text) {
+            Ok(result)
+        } else {
+            // If that fails, try to parse as ErrorResponse
+            if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
+                Err(ApiError::ServerError(error.message))
+            } else {
+                Err(ApiError::ParseError(format!(
+                    "Failed to parse JSON response as either success or error: '{}'",
+                    response_text
+                )))
+            }
+        }
     }
 }

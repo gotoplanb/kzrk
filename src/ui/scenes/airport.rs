@@ -1,7 +1,14 @@
 use crate::{
     systems::{game::GameState, trading::TradingSystem, travel::TravelSystem},
-    ui::scenes::{Location, SceneState},
+    ui::{
+        game_api_client::GameApiClient,
+        scenes::{Location, SceneState, room_lobby::GameSession},
+    },
 };
+
+#[cfg(feature = "gui")]
+#[allow(unused_imports)] // Only used in GUI feature
+use crate::api::models::MessageInfo;
 
 pub struct AirportScene;
 
@@ -10,6 +17,8 @@ impl AirportScene {
         game_state: &mut GameState,
         scene_state: &mut SceneState,
         ctx: &eframe::egui::Context,
+        api_client: &GameApiClient,
+        session: &GameSession,
     ) {
         // Get current airport info
         let current_airport = game_state
@@ -55,6 +64,9 @@ impl AirportScene {
                     Self::render_flight_planning(game_state, scene_state, ui)
                 },
                 Location::FuelPump => Self::render_fuel_pump(game_state, scene_state, ui),
+                Location::MessageBoard => {
+                    Self::render_message_board(game_state, scene_state, ui, api_client, session)
+                },
             }
         });
     }
@@ -104,6 +116,7 @@ impl AirportScene {
                 (Location::TradingDesk, "💼 Trading Desk"),
                 (Location::FlightPlanning, "✈️ Flight Planning"),
                 (Location::FuelPump, "⛽ Fuel Pump"),
+                (Location::MessageBoard, "💬 Message Board"),
             ];
 
             for (location, label) in locations {
@@ -1245,5 +1258,175 @@ impl AirportScene {
         } else {
             ui.label("❌ Fuel pumps are not operational at this time.");
         }
+    }
+
+    fn render_message_board(
+        game_state: &mut GameState,
+        scene_state: &mut SceneState,
+        ui: &mut eframe::egui::Ui,
+        api_client: &GameApiClient,
+        session: &GameSession,
+    ) {
+        ui.heading("💬 Message Board - Pilot Communications");
+
+        let current_airport = &game_state.player.current_airport;
+
+        // Display recent messages from API
+        eframe::egui::ScrollArea::vertical()
+            .max_height(300.0)
+            .show(ui, |ui| {
+                match api_client.get_messages_sync(session.room_id, session.player_id) {
+                    Ok(response) => {
+                        if response.messages.is_empty() {
+                            eframe::egui::Frame::none()
+                                .fill(eframe::egui::Color32::from_rgb(250, 250, 250))
+                                .inner_margin(eframe::egui::Margin::same(16.0))
+                                .show(ui, |ui| {
+                                    ui.vertical_centered(|ui| {
+                                        ui.label("📭 No messages at this airport yet.");
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            "Be the first to leave a message for other pilots!",
+                                        );
+                                    });
+                                });
+                        } else {
+                            ui.label(format!("📋 Recent messages at {}:", current_airport));
+                            ui.add_space(4.0);
+
+                            for message in &response.messages {
+                                eframe::egui::Frame::none()
+                                    .fill(eframe::egui::Color32::from_rgb(245, 245, 250))
+                                    .inner_margin(eframe::egui::Margin::same(8.0))
+                                    .outer_margin(eframe::egui::Margin::symmetric(0.0, 4.0))
+                                    .rounding(eframe::egui::Rounding::same(6.0))
+                                    .show(ui, |ui| {
+                                        ui.horizontal_top(|ui| {
+                                            ui.vertical(|ui| {
+                                                ui.label(
+                                                    eframe::egui::RichText::new(
+                                                        &message.author_name,
+                                                    )
+                                                    .strong()
+                                                    .color(eframe::egui::Color32::from_rgb(
+                                                        70, 130, 180,
+                                                    )),
+                                                );
+
+                                                // Format the timestamp
+                                                let local_time = message
+                                                    .created_at
+                                                    .with_timezone(&chrono::Local);
+                                                ui.label(
+                                                    eframe::egui::RichText::new(
+                                                        local_time.format("%H:%M").to_string(),
+                                                    )
+                                                    .small()
+                                                    .color(eframe::egui::Color32::GRAY),
+                                                );
+                                            });
+
+                                            ui.separator();
+                                            ui.label(&message.content);
+                                        });
+                                    });
+                            }
+                        }
+                    },
+                    Err(err) => {
+                        ui.colored_label(
+                            eframe::egui::Color32::RED,
+                            format!("Error loading messages: {}", err),
+                        );
+                    },
+                }
+            });
+
+        ui.add_space(8.0);
+        ui.separator();
+
+        // Message composition area
+        ui.heading("✍️ Post a Message");
+
+        if !scene_state.show_message_compose {
+            if ui.button("📝 Write a message").clicked() {
+                scene_state.show_message_compose = true;
+                scene_state.message_input.clear();
+            }
+        } else {
+            // Text input for message
+            ui.label("Message content (max 500 characters):");
+            let text_edit = eframe::egui::TextEdit::multiline(&mut scene_state.message_input)
+                .desired_width(f32::INFINITY)
+                .desired_rows(3);
+            ui.add(text_edit);
+
+            ui.horizontal(|ui| {
+                ui.label(format!(
+                    "Characters: {}/500",
+                    scene_state.message_input.len()
+                ));
+            });
+
+            ui.add_space(4.0);
+
+            // Post/Cancel buttons
+            ui.horizontal(|ui| {
+                let can_post = !scene_state.message_input.trim().is_empty()
+                    && scene_state.message_input.len() <= 500;
+
+                ui.add_enabled_ui(can_post, |ui| {
+                    if ui.button("📤 Post Message").clicked() {
+                        // Post message to API
+                        match api_client.post_message_sync(
+                            session.room_id,
+                            session.player_id,
+                            scene_state.message_input.clone(),
+                        ) {
+                            Ok(response) => {
+                                if response.success {
+                                    scene_state.message_input.clear();
+                                    scene_state.show_message_compose = false;
+                                } else {
+                                    eprintln!("Failed to post message: {}", response.message);
+                                    scene_state.message_input.clear();
+                                    scene_state.show_message_compose = false;
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("Failed to post message: {}", e);
+                                scene_state.message_input.clear();
+                                scene_state.show_message_compose = false;
+                            },
+                        }
+                    }
+                });
+
+                if ui.button("❌ Cancel").clicked() {
+                    scene_state.show_message_compose = false;
+                    scene_state.message_input.clear();
+                }
+
+                if !can_post && !scene_state.message_input.trim().is_empty() {
+                    ui.colored_label(
+                        eframe::egui::Color32::from_rgb(220, 50, 50),
+                        "⚠️ Message too long",
+                    );
+                }
+            });
+        }
+
+        ui.add_space(8.0);
+
+        // Instructions
+        eframe::egui::Frame::none()
+            .fill(eframe::egui::Color32::from_rgb(255, 252, 240))
+            .inner_margin(eframe::egui::Margin::same(8.0))
+            .show(ui, |ui| {
+                ui.label(
+                    "💡 Messages are location-specific - only pilots at this airport can see them.",
+                );
+                ui.label("📝 Share tips, warnings, or just say hello to fellow aviators!");
+            });
     }
 }
