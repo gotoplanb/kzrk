@@ -759,10 +759,11 @@ impl MultiplayerGameService {
             }
         }
 
-        // Build player list
+        // Build player list (only online players)
         let players = room
             .players
             .values()
+            .filter(|player_state| player_state.is_online)
             .map(|player_state| PlayerInfo {
                 id: Some(player_state.player_id),
                 name: player_state.player_name.clone(),

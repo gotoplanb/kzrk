@@ -137,7 +137,7 @@ impl GameRoom {
         player_name: String,
         starting_airport: Option<String>,
     ) -> Result<Uuid, String> {
-        if self.players.len() >= self.max_players {
+        if self.players.values().filter(|p| p.is_online).count() >= self.max_players {
             return Err("Room is full".to_string());
         }
 
@@ -269,6 +269,6 @@ impl GameRoom {
 
     pub fn is_joinable(&self) -> bool {
         matches!(self.game_status, GameStatus::WaitingForPlayers)
-            && self.players.len() < self.max_players
+            && self.players.values().filter(|p| p.is_online).count() < self.max_players
     }
 }
