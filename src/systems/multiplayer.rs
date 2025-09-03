@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::{
-    models::{Airport, CargoType, Market, Player},
+    models::{Airport, CargoType, Market, MessageBoard, Player},
     systems::GameStatistics,
 };
 
@@ -18,6 +18,7 @@ pub struct GameRoom {
     pub shared_state: SharedGameState,
     pub players: HashMap<Uuid, PlayerGameState>,
     pub player_statistics: HashMap<Uuid, GameStatistics>,
+    pub message_board: MessageBoard,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -116,7 +117,18 @@ impl GameRoom {
             shared_state,
             players,
             player_statistics,
+            message_board: MessageBoard::new(50), // Keep last 50 messages per airport
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn find_offline_player_by_name(&self, player_name: &str) -> Option<Uuid> {
+        for (player_id, player_state) in &self.players {
+            if player_state.player_name == player_name && !player_state.is_online {
+                return Some(*player_id);
+            }
+        }
+        None
     }
 
     pub fn add_player(
@@ -124,42 +136,84 @@ impl GameRoom {
         player_id: Uuid,
         player_name: String,
         starting_airport: Option<String>,
-    ) -> Result<(), String> {
-        if self.players.len() >= self.max_players {
+    ) -> Result<Uuid, String> {
+        if self.players.values().filter(|p| p.is_online).count() >= self.max_players {
             return Err("Room is full".to_string());
         }
 
-        if self.players.contains_key(&player_id) {
-            return Err("Player already in room".to_string());
-        }
-
-        // Check for duplicate names
-        for player_state in self.players.values() {
+        // Check if player already exists - allow rejoining if offline OR if it's been a while since they were last seen
+        let mut rejoining_player_id = None;
+        let now = chrono::Utc::now();
+        for (existing_id, player_state) in self.players.iter() {
             if player_state.player_name == player_name {
-                return Err("Player name already taken in this room".to_string());
+                if player_state.is_online {
+                    // Check if player has been inactive for more than 5 seconds (likely a stale connection)
+                    let inactive_duration = now.signed_duration_since(player_state.last_seen);
+                    if inactive_duration.num_seconds() > 5 {
+                        // Player seems to have disconnected without leaving - allow rejoin
+                        rejoining_player_id = Some(*existing_id);
+                        break;
+                    } else {
+                        // Player is truly online and active
+                        return Err("Player name already taken in this room".to_string());
+                    }
+                } else {
+                    // Player exists but is offline - they can rejoin with the same ID
+                    rejoining_player_id = Some(*existing_id);
+                    break;
+                }
             }
         }
 
-        let starting_airport = starting_airport.unwrap_or_else(|| "JFK".to_string());
-        let player = Player::new(5000, &starting_airport, 200, 1000, 15.0);
-        let now = chrono::Utc::now();
+        let actual_player_id;
 
-        let player_state = PlayerGameState {
-            player_id,
-            player_name,
-            player,
-            is_online: true,
-            last_seen: now,
-            joined_at: now,
-        };
+        if let Some(existing_id) = rejoining_player_id {
+            // Update existing offline player to be online
+            if let Some(player_state) = self.players.get_mut(&existing_id) {
+                player_state.is_online = true;
+                player_state.last_seen = now;
+                // Note: We don't update joined_at to preserve original join time
+            }
+            actual_player_id = existing_id;
+        } else {
+            // Check if the requested player_id is already taken
+            if self.players.contains_key(&player_id) {
+                return Err("Player already in room".to_string());
+            }
 
-        self.players.insert(player_id, player_state);
-        self.player_statistics
-            .insert(player_id, GameStatistics::new());
+            // New player joining
+            let starting_airport = starting_airport.unwrap_or_else(|| "JFK".to_string());
+            let player = Player::new(5000, &starting_airport, 200, 1000, 15.0);
 
-        Ok(())
+            let player_state = PlayerGameState {
+                player_id,
+                player_name,
+                player,
+                is_online: true,
+                last_seen: now,
+                joined_at: now,
+            };
+
+            self.players.insert(player_id, player_state);
+            self.player_statistics
+                .insert(player_id, GameStatistics::new());
+            actual_player_id = player_id;
+        }
+
+        Ok(actual_player_id)
     }
 
+    pub fn mark_player_offline(&mut self, player_id: Uuid) -> Result<(), String> {
+        if let Some(player_state) = self.players.get_mut(&player_id) {
+            player_state.is_online = false;
+            player_state.last_seen = chrono::Utc::now();
+            Ok(())
+        } else {
+            Err("Player not in room".to_string())
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn remove_player(&mut self, player_id: Uuid) -> Result<(), String> {
         if !self.players.contains_key(&player_id) {
             return Err("Player not in room".to_string());
@@ -215,6 +269,6 @@ impl GameRoom {
 
     pub fn is_joinable(&self) -> bool {
         matches!(self.game_status, GameStatus::WaitingForPlayers)
-            && self.players.len() < self.max_players
+            && self.players.values().filter(|p| p.is_online).count() < self.max_players
     }
 }

@@ -163,3 +163,38 @@ pub async fn find_player_sessions(
         )),
     }
 }
+
+pub async fn post_message(
+    State(service): State<MultiplayerGameService>,
+    Path((room_id, player_id)): Path<(Uuid, Uuid)>,
+    JsonExtract(request): JsonExtract<PostMessageRequest>,
+) -> Result<Json<PostMessageResponse>, (StatusCode, Json<ErrorResponse>)> {
+    match service.post_message(room_id, player_id, request.content) {
+        Ok(response) => Ok(Json(response)),
+        Err(error) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "PostMessageError".to_string(),
+                message: error,
+                details: None,
+            }),
+        )),
+    }
+}
+
+pub async fn get_messages(
+    State(service): State<MultiplayerGameService>,
+    Path((room_id, player_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<GetMessagesResponse>, (StatusCode, Json<ErrorResponse>)> {
+    match service.get_messages(room_id, player_id) {
+        Ok(response) => Ok(Json(response)),
+        Err(error) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "GetMessagesError".to_string(),
+                message: error,
+                details: None,
+            }),
+        )),
+    }
+}

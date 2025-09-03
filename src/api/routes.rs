@@ -54,6 +54,10 @@ pub fn create_multiplayer_router(service: MultiplayerGameService) -> Router {
         // Session management
         .route("/players/:player_name/sessions", get(multiplayer_handlers::find_player_sessions))
 
+        // Message board endpoints
+        .route("/rooms/:room_id/players/:player_id/messages", post(multiplayer_handlers::post_message))
+        .route("/rooms/:room_id/players/:player_id/messages", get(multiplayer_handlers::get_messages))
+
         // Reference data (stateless handlers)
         .route("/airports", get(stateless_handlers::get_available_airports))
         .route("/cargo", get(stateless_handlers::get_available_cargo))

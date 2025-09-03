@@ -32,7 +32,7 @@ lint: fmt-check
 # Run all tests
 test:
 	@echo "Running all tests..."
-	cargo test --all-features --lib --bins --test api_integration_tests --test error_scenario_tests --test game_integration_tests --test performance_tests --test property_tests
+	cargo test --all-features --lib --bins --test api_integration_tests --test database_tests --test error_scenario_tests --test game_integration_tests --test gui_api_client_tests --test message_board_tests --test multiplayer_persistence_tests --test performance_tests --test property_tests --test room_lifecycle_tests
 	cargo test --all-features --test save_system_tests -- --test-threads=1
 
 # Run integration tests only

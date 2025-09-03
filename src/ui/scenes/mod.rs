@@ -22,6 +22,7 @@ pub enum Location {
     TradingDesk,    // Buy/sell cargo
     FlightPlanning, // Travel to other airports
     FuelPump,       // Buy fuel
+    MessageBoard,   // Read and post messages
                     // Future locations:
                     // Hangar,       // Plane upgrades
                     // WeatherStation, // Weather info
@@ -48,6 +49,10 @@ pub struct SceneState {
 
     // UI state for fuel purchase
     pub fuel_quantity: u32,
+
+    // UI state for message board
+    pub message_input: String,
+    pub show_message_compose: bool,
 }
 
 impl SceneState {
@@ -59,6 +64,8 @@ impl SceneState {
             trade_quantity: 1,
             selected_destination: None,
             fuel_quantity: 10,
+            message_input: String::new(),
+            show_message_compose: false,
         }
     }
 
@@ -67,6 +74,8 @@ impl SceneState {
         // Reset UI state when changing locations
         self.selected_cargo = None;
         self.selected_destination = None;
+        self.message_input.clear();
+        self.show_message_compose = false;
     }
 
     pub fn travel_to_airport(&mut self, airport_id: String) {

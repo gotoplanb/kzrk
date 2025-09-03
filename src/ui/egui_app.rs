@@ -21,7 +21,7 @@ pub enum AppState {
 pub struct KzrkEguiApp {
     app_state: AppState,
     scene_state: SceneState,
-    api_client: Option<GameApiClient>,
+    api_client: GameApiClient,
     game_state: Option<MultiplayerGameStateResponse>,
     converted_game_state: Option<crate::systems::game::GameState>, // Cache converted state
     last_local_action: Option<std::time::Instant>,                 // Track recent local actions
@@ -41,7 +41,7 @@ impl KzrkEguiApp {
         Self {
             app_state: AppState::ServerConnection,
             scene_state: SceneState::new(),
-            api_client: None,
+            api_client: GameApiClient::new("127.0.0.1:3000".to_string()),
             game_state: None,
             converted_game_state: None,
             last_local_action: None,
@@ -63,15 +63,15 @@ impl eframe::App for KzrkEguiApp {
         match &self.app_state.clone() {
             AppState::ServerConnection => {
                 if let Some((scene, client)) = self.server_connection_scene.render(ctx) {
-                    self.api_client = Some(client);
+                    self.api_client = client;
                     if scene == Scene::RoomLobby {
                         self.app_state = AppState::RoomLobby
                     }
                 }
             },
             AppState::RoomLobby => {
-                if let Some(client) = &self.api_client
-                    && let Some((scene, session)) = self.room_lobby_scene.render(ctx, client)
+                // API client is always available
+                if let Some((scene, session)) = self.room_lobby_scene.render(ctx, &self.api_client)
                 {
                     self.app_state = AppState::InGame(session);
                     if let Scene::Airport(airport_id) = scene {
@@ -125,6 +125,7 @@ impl eframe::App for KzrkEguiApp {
                                         &mut self.scene_state,
                                         &session_clone,
                                         ctx,
+                                        &self.api_client,
                                     )
                                 {
                                     self.last_local_action = Some(action_time);
@@ -370,6 +371,7 @@ impl KzrkEguiApp {
             stats: crate::models::GameStats::new(5000), // Default starting money
             win_condition_money: 100000,                // Default win condition
             active_events: Vec::new(),
+            message_board: crate::models::MessageBoard::new(50),
         })
     }
 
@@ -431,8 +433,9 @@ impl KzrkEguiApp {
     fn render_multiplayer_airport_scene_static(
         converted_state: &mut crate::systems::game::GameState,
         scene_state: &mut SceneState,
-        _session: &GameSession,
+        session: &GameSession,
         ctx: &egui::Context,
+        api_client: &GameApiClient,
     ) -> Option<std::time::Instant> {
         // Store the original state to detect changes
         let original_money = converted_state.player.money;
@@ -440,8 +443,14 @@ impl KzrkEguiApp {
         let original_location = converted_state.player.current_airport.clone();
         let original_cargo = converted_state.player.cargo_inventory.clone();
 
-        // Render the original scene
-        crate::ui::scenes::airport::AirportScene::render(converted_state, scene_state, ctx);
+        // Render the airport scene (always uses API for message persistence)
+        crate::ui::scenes::airport::AirportScene::render(
+            converted_state,
+            scene_state,
+            ctx,
+            api_client,
+            session,
+        );
 
         // Track changes for action detection (API calls would go here in full implementation)
 
@@ -610,7 +619,7 @@ impl KzrkEguiApp {
                 // TODO: Leave room via API - for now just disconnect
                 println!("Leaving room: {}", game_state.room_info.name);
                 self.app_state = AppState::ServerConnection;
-                self.api_client = None;
+                // Keep API client active for reconnection
                 self.game_state = None;
                 self.converted_game_state = None; // Clear cached state
             }

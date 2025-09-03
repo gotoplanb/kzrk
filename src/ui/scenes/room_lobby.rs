@@ -177,8 +177,10 @@ impl RoomLobbyScene {
                                                             match self.join_room_sync(client, room.id) {
                                                                 Ok(session) => transition = Some((Scene::Airport("JFK".to_string()), session)),
                                                                 Err(e) => {
-                                                                    self.error_message = Some(format!("Failed to join room: {:?}", e));
-                                                                    self.lobby_state = LobbyState::Error(format!("{:?}", e));
+                                                                    let error_msg = format!("Failed to join room: {:?}", e);
+                                                                    eprintln!("Room join error: {}", error_msg);
+                                                                    self.error_message = Some(error_msg.clone());
+                                                                    self.lobby_state = LobbyState::Error(error_msg);
                                                                 }
                                                             }
                                                         } else {
@@ -273,12 +275,23 @@ impl RoomLobbyScene {
         client: &GameApiClient,
         room_id: Uuid,
     ) -> Result<GameSession, ApiError> {
-        let response = client.join_room_sync(
-            room_id,
-            self.player_name.clone(),
-            Some("JFK".to_string()), // Default starting airport
-        )?;
+        eprintln!(
+            "Attempting to join room {} as player '{}'",
+            room_id, self.player_name
+        );
 
+        let response = client
+            .join_room_sync(
+                room_id,
+                self.player_name.clone(),
+                Some("JFK".to_string()), // Default starting airport
+            )
+            .map_err(|e| {
+                eprintln!("Join room failed with error: {:?}", e);
+                e
+            })?;
+
+        eprintln!("Successfully joined room: {:?}", response);
         Ok(GameSession {
             room_id: response.room_id,
             player_id: response.player_id,
