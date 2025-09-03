@@ -25,7 +25,7 @@ pub struct ServerConnectionScene {
 impl Default for ServerConnectionScene {
     fn default() -> Self {
         Self {
-            server_address: "127.0.0.1:3000".to_string(),
+            server_address: "http://127.0.0.1:3000".to_string(),
             connection_state: ConnectionState::Disconnected,
             error_message: None,
         }
@@ -48,9 +48,13 @@ impl ServerConnectionScene {
 
                 // Server address input
                 ui.horizontal(|ui| {
-                    ui.label("Server Address:");
-                    ui.text_edit_singleline(&mut self.server_address);
+                    ui.label("Server URL:");
+                    let response = ui.text_edit_singleline(&mut self.server_address);
+                    if response.gained_focus() {
+                        response.request_focus();
+                    }
                 });
+                ui.label("Examples: http://127.0.0.1:3000, https://zeromission.ngrok.app");
 
                 ui.add_space(10.0);
 
@@ -101,9 +105,12 @@ impl ServerConnectionScene {
                 ui.separator();
                 ui.add_space(10.0);
                 ui.label("💡 Instructions:");
-                ui.label("• Make sure a KZRK server is running with: cargo run api");
-                ui.label("• Default server runs on 127.0.0.1:3000");
-                ui.label("• You can connect multiple clients to the same server");
+                ui.label("• For local server: cargo run api (uses http://127.0.0.1:3000)");
+                ui.label(
+                    "• For ngrok: Use the HTTPS URL from ngrok (e.g., https://your-name.ngrok.app)",
+                );
+                ui.label("• Supports both HTTP and HTTPS connections");
+                ui.label("• Multiple clients can connect to the same server");
                 ui.add_space(10.0);
                 ui.separator();
             });

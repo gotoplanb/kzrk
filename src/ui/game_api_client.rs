@@ -47,9 +47,19 @@ impl std::fmt::Display for ApiError {
 #[allow(dead_code)]
 impl GameApiClient {
     pub fn new(server_address: String) -> Self {
+        // Support both full URLs and IP:port format
+        let base_url =
+            if server_address.starts_with("http://") || server_address.starts_with("https://") {
+                // Remove trailing slash if present
+                server_address.trim_end_matches('/').to_string()
+            } else {
+                // Legacy format: assume HTTP and IP:port
+                format!("http://{}", server_address)
+            };
+
         Self {
             client: reqwest::Client::new(),
-            base_url: format!("http://{}", server_address),
+            base_url,
         }
     }
 
